@@ -1,0 +1,32 @@
+#ifndef ram_controller_h
+#define ram_controller_h
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+#include "board.h"
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+uint8_t ram_bus_hw_access( uint32_t address, uint8_t data_in, bool_t is_read );
+
+uint16_t ram_bus_hw_read_16( uint32_t address );
+
+void ram_bus_hw_reset_set_io_handler( uint8_t page, io_addr_t io_read, io_addr_t io_write );
+void ram_bus_hw_reset( void );
+void ram_bus_hw_init( void );
+
+uint8_t ram_bus_read_sw_switch( uint16_t index );
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ram_controller_h */
