@@ -1,7 +1,7 @@
 # CPLD-ROM-0002 — Specify slot ROM and expansion ROM flash layout
 
 **ID:** `CPLD-ROM-0002`  
-**Status:** `OPEN`  
+**Status:** `REVIEW`  
 **Title:** Specify slot ROM and expansion ROM flash layout
 
 **Description**
@@ -27,6 +27,9 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
+- **2026-11-20 — Implementation:** Authored [`docs/rom-memory-map.md`](../../rom-memory-map.md) specifying Apple CPU windows, the emulator 64 KiB logical ROM space, the physical `*.romimg` flash layout/packing format, and the slot-7 ProDOS reservation.
+- **2026-11-20 — Decision:** Grounded the map on the CPLD-ROM-0001 finding that `MEM_ADDR_OUT` equals the raw CPU address under `MODE_SEL=1`; per-slot ROM is addressed by CPU `$Cn00`, and the `$C800–$CFFF` expansion window is a single physical region reserved for slot 7 in the emulator. Hardware multi-card expansion deferred to `CPLD-HW-0001`.
+- **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW`; awaiting owner acceptance of the specification.
 
 **Proposed Change**
 
@@ -37,15 +40,20 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 
 ### Acceptance criteria and evidence to record
 
-- [ ] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location.
-- [ ] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence.
-- [ ] Image layout can be implemented in the emulator and built for STM32-managed flash without requiring a change to the Apple-visible ROM contents.
+- [x] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location (`docs/rom-memory-map.md` §2–§4).
+- [x] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence (§1, §3; `tb_mmu_addr.cpp` tests 3–5).
+- [x] Image layout can be implemented in the emulator and built for STM32-managed flash without requiring a change to the Apple-visible ROM contents (§3 overlay-after-load, §4–§5 packer contract).
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
 
 **Resolution Description**
 
-Pending. No code has been implemented or tested by creation of this ticket.
+Awaiting owner review. `docs/rom-memory-map.md` specifies the Apple CPU
+windows, the emulator logical ROM space, and the physical `*.romimg` flash
+layout/packing format, reserving slot 7 for ProDOS. The specification is
+grounded on the verified CPLD-ROM-0001 address behaviour and defers hardware
+multi-card expansion and real-time ROM servicing to `CPLD-HW-0001`.
