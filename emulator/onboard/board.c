@@ -173,7 +173,7 @@ void board_startup( void )
     cpld_model.IOU.pdl_strobe = TRUE;
     cpld_model.IOU.C0XX_N = TRUE;
     cpld_model.IOU.spi_pending = FALSE;
-    cpld_model.IOU.spi_state = 0;
+    cpld_model.IOU.spi_slave_state = SPI_SLAVE_STATE_IDLE;
 
     cpld_model.MMU.C0XX_N = TRUE;
 

@@ -1,137 +1,115 @@
-#include "rtl_model.h"
 #include "rtl_interface.h"
 
-////////////////////////////////////////////////////////////////////////////////////
-
+// Each state is processed by one call to the central Verilator scheduler.
+// Clock phases are deliberately explicit rather than hiding eval() in here.
 enum
 {
-    BUS_STATE_IDLE,
+    BUS_STATE_IDLE = 0,
     BUS_STATE_PHASE_0,
     BUS_STATE_PHASE_1,
+    BUS_STATE_RELEASE
 };
 
 enum
 {
-    BUS_XFER_PHASE_IDLE,
+    BUS_XFER_PHASE_IDLE = 0,
     BUS_XFER_PHASE_REQ,
     BUS_XFER_PHASE_PROCESS,
-    BUS_XFER_PHASE_DONE,
+    BUS_XFER_PHASE_DONE
 };
 
-#define PHASE_CLOCK_DIVIDER  4
+#define PHASE_CLOCK_DIVIDER 4
 
-////////////////////////////////////////////////////////////////////////////////////
-
-void memory_bus_process( cpld_model_t *cpld_model )
+void memory_bus_process( cpld_model_t *context )
 {
-    cpld_data_t *cpld_data = (cpld_data_t *)cpld_model->p_data;
-    
-    switch( cpld_data->MMU.bus_state )
+    cpld_model_MMU_t *mmu = context->mmu;
+
+    switch( mmu->bus_state )
     {
         case BUS_STATE_IDLE:
-            cpld_data->MMU.clock_div = 0;
+            context->p_model->PHI_0 = FALSE;
             break;
 
         case BUS_STATE_PHASE_0:
-            cpld_model->p_model->DATA__en = cpld_data->MMU.cpu_rw;
-
-            cpld_model->p_model->PHI_0     = FALSE;
-            cpld_model->p_model->ADDR      = cpld_data->MMU.mem_address;
-            cpld_model->p_model->CPU_RW    = cpld_data->MMU.cpu_rw;
-            cpld_model->p_model->MODE_SEL  = TRUE;
-
-            if( cpld_data->MMU.bus_xfer_phase == BUS_XFER_PHASE_REQ )
+            context->p_model->PHI_0 = FALSE;
+            mmu->bus_xfer_phase = BUS_XFER_PHASE_PROCESS;
+            if( ++mmu->clock_div >= PHASE_CLOCK_DIVIDER )
             {
-                cpld_data->MMU.bus_xfer_phase = BUS_XFER_PHASE_PROCESS;
-            }
-
-            if( cpld_data->MMU.cpu_rw == FALSE )
-            {
-                cpld_model->p_model->DATA = cpld_data->MMU.data_in;
-            }
-
-            if( cpld_data->MMU.mem_address == 0xC0F1 )
-            {
-                cpld_model->p_model->MODE_SEL  = TRUE;
-            }
-
-            if( ++cpld_data->MMU.clock_div >= PHASE_CLOCK_DIVIDER )
-            {
-                cpld_data->MMU.clock_div   = 0;
-                cpld_data->MMU.bus_state   = BUS_STATE_PHASE_1;
-                cpld_model->p_model->PHI_0  = TRUE;
+                mmu->clock_div = 0;
+                mmu->bus_state = BUS_STATE_PHASE_1;
             }
             break;
 
         case BUS_STATE_PHASE_1:
-            if( ++cpld_data->MMU.clock_div >= PHASE_CLOCK_DIVIDER )
+            context->p_model->PHI_0 = TRUE;
+            if( ++mmu->clock_div >= PHASE_CLOCK_DIVIDER )
             {
-                if( !( cpld_model->p_model->DATA_EN_N & 0x01 ) && cpld_data->MMU.cpu_rw )
-                {
-                    cpld_data->IOU.data_bus = cpld_model->p_model->DATA__out;
-                }     
-
-                cpld_data->MMU.mem_address = ( cpld_model->p_model->MEM_ADDR_OUT & 0x01F );
-                cpld_data->MMU.mem_address = ( cpld_data->MMU.mem_address & 0x0FFF );
-
-                cpld_data->MMU.IOSEL_N     = cpld_model->p_model->IOSEL_OUT_N;
-                cpld_data->MMU.IOSTB_N     = cpld_model->p_model->IOSTB_N;
-
-                cpld_data->MMU.DEVSEL_N    = cpld_model->p_model->DEVSEL_n;
-                cpld_data->MMU.rom_en_n    = cpld_model->p_model->ROM_EN_N;
-                cpld_data->MMU.ram_en_n    = cpld_model->p_model->RAM_EN_N;
-                
-                cpld_data->IOU.devsel_3_n  = cpld_model->p_model->C0BX_N;
-                cpld_data->IOU.devsel_6_n  = cpld_model->p_model->C0EX_N;
-                cpld_data->IOU.iosel_6_n   = cpld_model->p_model->C6XX_N;
-
-                cpld_data->IOU.spk         = cpld_model->p_model->SPK_OUT;
-
-                cpld_data->MMU.clock_div   = 0;
-                cpld_data->MMU.bus_state   = BUS_STATE_PHASE_0;
-                cpld_model->p_model->PHI_0  = FALSE;
-
-                if( cpld_data->MMU.bus_xfer_phase == BUS_XFER_PHASE_PROCESS )
-                {
-                    cpld_data->MMU.bus_xfer_phase = BUS_XFER_PHASE_DONE;
-                }
+                mmu->clock_div = 0;
+                mmu->bus_state = BUS_STATE_RELEASE;
             }
             break;
-    } 
+
+        case BUS_STATE_RELEASE:
+            // Settle the falling edge before handing the cycle to the CPU.
+            context->p_model->PHI_0 = FALSE;
+            mmu->bus_state = BUS_STATE_IDLE;
+            mmu->bus_xfer_phase = BUS_XFER_PHASE_DONE;
+            break;
+
+        default:
+            mmu->bus_state = BUS_STATE_IDLE;
+            break;
+    }
 }
 
-void memory_bus_reset( cpld_model_t *cpld_model )
+// During RELEASE the last high phase has already been driven, but the
+// falling edge has not yet been evaluated. Capture the translated address
+// and device outputs once, after eval() of that last high phase.
+void memory_bus_latch( cpld_model_t *context )
 {
-    
-    cpld_data_t *cpld_data = (cpld_data_t *)cpld_model->p_data;
-    cpld_data->MMU.clock_div       = 0;
-    cpld_data->MMU.bus_state       = BUS_STATE_IDLE;
-    cpld_data->MMU.bus_xfer_phase  = BUS_XFER_PHASE_IDLE;
-    cpld_data->MMU.cpu_rw          = FALSE;
-    cpld_data->MMU.data_in         = 0;
-    cpld_data->MMU.data_out        = 0;
-    cpld_data->MMU.mem_address     = 0;
-    cpld_data->MMU.IOSEL_N         = TRUE;
-    cpld_data->MMU.IOSTB_N         = TRUE;
-    cpld_data->MMU.DEVSEL_N        = TRUE;
-    cpld_data->MMU.rom_en_n        = TRUE;
-    cpld_data->MMU.ram_en_n        = TRUE;
+    if( context->mmu->bus_state == BUS_STATE_RELEASE &&
+        context->mmu->bus_xfer_phase == BUS_XFER_PHASE_PROCESS )
+    {
+        cpu_bus_capture( context );
+        rtl_interconnect_capture( context );
+    }
 }
 
-void memory_bus_request( cpld_model_t *cpld_model, uint32_t address, bool_t cpu_rw, uint8_t data_in )
+void memory_bus_reset( cpld_model_t *context )
 {
-    cpld_data_t *cpld_data = (cpld_data_t *)cpld_model->p_data;
-    cpld_data->MMU.mem_address     = address;
-    cpld_data->MMU.cpu_rw          = cpu_rw;
-    cpld_data->MMU.data_in         = data_in;
-    cpld_data->MMU.bus_xfer_phase  = BUS_XFER_PHASE_REQ;
+    cpld_model_MMU_t *mmu = context->mmu;
+    mmu->clock_div = 0;
+    mmu->bus_state = BUS_STATE_IDLE;
+    mmu->bus_xfer_phase = BUS_XFER_PHASE_IDLE;
+    mmu->cpu_address = 0;
+    mmu->cpu_rw = FALSE;
+    mmu->data_in = 0;
+    mmu->data_out = 0;
+    mmu->mem_address = 0;
+    mmu->IOSEL_N = TRUE;
+    mmu->IOSTB_N = TRUE;
+    mmu->DEVSEL_N = TRUE;
+    mmu->rom_en_n = TRUE;
+    mmu->ram_en_n = TRUE;
 }
 
-bool_t memory_bus_is_done( cpld_model_t *cpld_model )
+void memory_bus_request( cpld_model_t *context )
 {
-    cpld_data_t *cpld_data = (cpld_data_t *)cpld_model->p_data;
-    bool_t done = ( cpld_data->MMU.bus_xfer_phase == BUS_XFER_PHASE_DONE );
-    cpld_data->MMU.bus_xfer_phase  = BUS_XFER_PHASE_IDLE;    
-    return done;
+    cpld_model_MMU_t *mmu = context->mmu;
+    mmu->clock_div = 0;
+    mmu->bus_state = BUS_STATE_PHASE_0;
+    mmu->bus_xfer_phase = BUS_XFER_PHASE_REQ;
 }
 
+bool_t memory_bus_is_done( cpld_model_t *context )
+{
+    return context->mmu->bus_xfer_phase == BUS_XFER_PHASE_DONE;
+}
+
+void memory_bus_ack( cpld_model_t *context )
+{
+    if( memory_bus_is_done( context ) )
+    {
+        context->mmu->bus_xfer_phase = BUS_XFER_PHASE_IDLE;
+    }
+}

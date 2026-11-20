@@ -55,7 +55,8 @@ typedef struct cpld_model_MMU_t_
     bool_t rom_en_n;
     bool_t ram_en_n;
 
-    uint32_t mem_address;
+    uint32_t cpu_address; // original 16-bit address from the CPU
+    uint32_t mem_address; // physical MMU address after translation
     uint8_t  clock_div;
     uint8_t  bus_state;
     bool_t   cpu_rw;
@@ -91,6 +92,8 @@ typedef struct cpld_model_IOU_t_
     uint16_t spi_data_rcvr;
     uint8_t  spi_bit_index;
     uint8_t  spi_slave_state;
+    uint8_t  spi_clock_div;
+    uint8_t  spi_miso_latched;
     uint8_t  spi_id;
 
     uint64_t cycles_pdl_0;
@@ -98,8 +101,6 @@ typedef struct cpld_model_IOU_t_
     uint64_t cycles_pdl_2;
     uint64_t cycles_pdl_3;
 
-    // to be removed
-    uint8_t  spi_state;
 
 } cpld_model_IOU_t;
 
@@ -111,6 +112,20 @@ typedef struct cpld_data_t_
 } cpld_data_t;
 
 ////////////////////////////////////////////////////////////////////////////////////
+
+// Shared with the C-side SPI request/response queue.
+typedef enum
+{
+    SPI_SLAVE_STATE_IDLE = 0,
+    SPI_SLAVE_STATE_RESET_LOW,
+    SPI_SLAVE_STATE_RESET_HIGH,
+    SPI_SLAVE_STATE_SHIFT_LOW,
+    SPI_SLAVE_STATE_SHIFT_HIGH,
+    SPI_SLAVE_STATE_WAIT_LOW,
+    SPI_SLAVE_STATE_WAIT_HIGH,
+    SPI_SLAVE_STATE_CLOSE,
+    SPI_SLAVE_STATE_DONE
+} spi_slave_state_t;
 
 void rtl_model_init( void );
 
