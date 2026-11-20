@@ -49,7 +49,7 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
+| `mmu-rom-analysis` | `f77b260` | `UNREVIEWED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
 
 **Resolution Description**
 

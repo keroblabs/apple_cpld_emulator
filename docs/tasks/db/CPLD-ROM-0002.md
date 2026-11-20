@@ -48,7 +48,7 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
+| `mmu-rom-analysis` | `846dd38` | `UNREVIEWED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
 
 **Resolution Description**
 

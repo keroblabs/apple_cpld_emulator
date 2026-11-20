@@ -99,7 +99,7 @@ to `17'd0`; behaviour is unchanged (the branch already produced zero).
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | MMU_addr truth-table regression + 17-bit literal width fix |
+| `mmu-rom-analysis` | `ac11544` | `UNREVIEWED` | MMU_addr truth-table regression + 17-bit literal width fix |
 
 **Resolution Description**
 
