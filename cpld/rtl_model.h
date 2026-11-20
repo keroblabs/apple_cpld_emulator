@@ -130,6 +130,7 @@ typedef enum
 void rtl_model_init( void );
 
 void rtl_model_reset( void );
+void rtl_model_state_reset( cpld_data_t *cpld_data );
 void rtl_model_iterate( uint32_t address, bool_t cpu_rw, uint8_t data_in, cpld_model_MMU_t * cpld_model_MMU, cpld_model_IOU_t * cpld_model_IOU );
 
 ////////////////////////////////////////////////////////////////////////////////////

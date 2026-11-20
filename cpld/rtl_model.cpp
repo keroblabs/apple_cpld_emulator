@@ -46,15 +46,27 @@ void rtl_model_reset( void )
     p_model->eval();
 }
 
+// Called after the board clears its software-side CPLD state, so all
+// state machines and inactive-high chip selects have deterministic values.
+void rtl_model_state_reset( cpld_data_t *cpld_data )
+{
+    cpld_model_t context = { &cpld_data->MMU, &cpld_data->IOU, p_model };
+    memory_bus_reset( &context );
+    spi_slave_reset( &context );
+}
+
 void rtl_model_iterate( uint32_t address, bool_t cpu_rw, uint8_t data_in,
                         cpld_model_MMU_t *mmu, cpld_model_IOU_t *iou )
 {
     cpld_model_t context = { mmu, iou, p_model };
     cpu_bus_request( &context, address, cpu_rw, data_in );
 
-    // 4 low PHI ticks + 4 high PHI ticks + 1 release tick.
-    // SPI is sampled on EVERY tick, independently of these CPU phases.
-    for( unsigned tick = 0; tick < 9; ++tick )
+    // The present divider takes 4 low + 4 high + 1 release ticks.
+    // Wait on the state machine rather than hard-coding that schedule.
+    // The watchdog prevents a regression from silently wedging the CPU.
+    const unsigned max_bus_ticks = 32;
+    for( unsigned tick = 0; tick < max_bus_ticks &&
+                            !memory_bus_is_done( &context ); ++tick )
     {
         cpu_bus_process( &context );
         memory_bus_process( &context );

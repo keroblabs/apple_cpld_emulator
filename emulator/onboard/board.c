@@ -146,6 +146,7 @@ void board_startup( void )
 {
     rtl_model_reset();
     memset( &cpld_model, 0x00, sizeof( cpld_model ) );
+    rtl_model_state_reset( &cpld_model );
 
     memory_controller_init();
 
