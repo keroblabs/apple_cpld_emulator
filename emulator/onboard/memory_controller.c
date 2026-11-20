@@ -16,7 +16,7 @@ static uint8_t rom_memory[ ROM_SIZE * 2 ];
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-static uint8_t board_read_bus( cpld_model_t * cpld, uint32_t cpu_address )
+static uint8_t board_read_bus( cpld_data_t * cpld, uint32_t cpu_address )
 {
     uint8_t data_xfer = 0;
 
@@ -65,7 +65,7 @@ static uint8_t board_read_bus( cpld_model_t * cpld, uint32_t cpu_address )
     return data_xfer;
 }
 
-static void board_write_bus( cpld_model_t * cpld, uint32_t cpu_address, uint8_t data_xfer )
+static void board_write_bus( cpld_data_t * cpld, uint32_t cpu_address, uint8_t data_xfer )
 {
     if( !cpld->MMU.ram_en_n )
     {
@@ -108,7 +108,7 @@ void memory_controller_init( void )
 uint8_t memory_controller_access( void * p_cpld, uint32_t cpu_address, bool_t is_read, uint8_t data_in )
 {
     uint8_t data_out = 0;
-    cpld_model_t * cpld = ( cpld_model_t * )p_cpld;
+    cpld_data_t * cpld = ( cpld_data_t * )p_cpld;
 
     if( !is_read )
     {

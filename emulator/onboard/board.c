@@ -53,7 +53,7 @@ static timer_data_t benchmark_ms;
 static rtl_access_t rtl_context;
 static rtl_video_t  rtl_video;
 
-static cpld_model_t cpld_model;
+static cpld_data_t cpld_model;
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +86,7 @@ static void board_benchmark( void )
 }
 
 #if 0
-static void board_speaker_control( cpld_model_t * cpld )
+static void board_speaker_control( cpld_data_t * cpld )
 {
     if( cpld->IOU.prev_spk != cpld->IOU.spk )
     {
@@ -96,7 +96,7 @@ static void board_speaker_control( cpld_model_t * cpld )
 }
 #endif
 
-static void board_paddle_control( cpld_model_t * cpld )
+static void board_paddle_control( cpld_data_t * cpld )
 {
     uint8_t paddle_0 = 128;
     uint8_t paddle_1 = 128;
@@ -119,7 +119,7 @@ static void board_paddle_control( cpld_model_t * cpld )
     if( ( cpld->IOU.cycles_pdl_3 != 0 ) && ( cpld->MMU.clock_counter > cpld->IOU.cycles_pdl_3 ) ) cpld->IOU.cycles_pdl_3 = 0;
 }
 
-static void board_bus_address( rtl_access_t * state, cpld_model_t * cpld )
+static void board_bus_address( rtl_access_t * state, cpld_data_t * cpld )
 {
     if( state->cpu_halt == CPU_HALT_NONE )
     {

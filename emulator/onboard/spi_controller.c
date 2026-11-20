@@ -59,7 +59,7 @@ bool_t spi_controller_check_complete( uint8_t id, spi_data_t * spi_resp )
 
 void spi_controller_process( void * p_cpld )
 {
-    cpld_model_t * cpld = ( cpld_model_t * )p_cpld;
+    cpld_data_t * cpld = ( cpld_data_t * )p_cpld;
 
     if( cpld->IOU.spi_pending == FALSE )
     {

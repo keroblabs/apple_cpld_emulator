@@ -29,6 +29,7 @@ extern "C" {
 
 ////////////////////////////////////////////////////////////////////////////////////
 
+
 typedef struct cpld_model_MMU_t_
 {
     bool_t DEVSEL_N;
@@ -55,6 +56,12 @@ typedef struct cpld_model_MMU_t_
     bool_t ram_en_n;
 
     uint32_t mem_address;
+    uint8_t  clock_div;
+    uint8_t  bus_state;
+    bool_t   cpu_rw;
+    uint8_t  data_in;
+    uint8_t  data_out;
+    uint8_t  bus_xfer_phase;
 
     uint64_t clock_counter;
 
@@ -83,7 +90,7 @@ typedef struct cpld_model_IOU_t_
     uint16_t spi_data_send;
     uint16_t spi_data_rcvr;
     uint8_t  spi_bit_index;
-    uint8_t  spi_state;
+    uint8_t  spi_slave_state;
     uint8_t  spi_id;
 
     uint64_t cycles_pdl_0;
@@ -91,16 +98,21 @@ typedef struct cpld_model_IOU_t_
     uint64_t cycles_pdl_2;
     uint64_t cycles_pdl_3;
 
+    // to be removed
+    uint8_t  spi_state;
+
 } cpld_model_IOU_t;
 
-typedef struct cpld_model_t_
+typedef struct cpld_data_t_
 {
     cpld_model_MMU_t MMU;
     cpld_model_IOU_t IOU;
 
-} cpld_model_t;
+} cpld_data_t;
 
 ////////////////////////////////////////////////////////////////////////////////////
+
+void rtl_model_init( void );
 
 void rtl_model_reset( void );
 void rtl_model_iterate( uint32_t address, bool_t cpu_rw, uint8_t data_in, cpld_model_MMU_t * cpld_model_MMU, cpld_model_IOU_t * cpld_model_IOU );

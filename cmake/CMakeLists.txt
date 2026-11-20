@@ -27,6 +27,9 @@ add_definitions("-Wall")
 
 set(SOURCE_FILES        ../cpld/rtl_model.cpp
                         ../cpld/rtl_interface.cpp
+                        ../cpld/rtl_memory_bus.cpp
+                        ../cpld/rtl_spi_slave.cpp
+                        
                         #../self_test/rtl_self_test.cpp
                         #../self_test/rtl_self_test_MMU.cpp
                         #../self_test/rtl_self_test_CPLD.cpp

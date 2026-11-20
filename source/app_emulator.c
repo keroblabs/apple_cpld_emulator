@@ -1,6 +1,6 @@
 #include "graphics.h"
 #include "draw.h"
-#include "rtl_interface.h"
+#include "rtl_model.h"
 
 #include "board.h"
 #include "sw_switch.h"
@@ -31,7 +31,7 @@ static void video_thread_handler( void )
 
 int main( void )
 {
-    rtl_interface_init();
+    rtl_model_init();
     timer_Init();
     
     graphics_init();

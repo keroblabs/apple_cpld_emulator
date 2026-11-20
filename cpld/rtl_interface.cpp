@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cmath>
 
-#include "rtl_internal.h"
+//#include "rtl_internal.h"
 
 #include "verilated.h"
 //#include "verilated_vcd_c.h"
