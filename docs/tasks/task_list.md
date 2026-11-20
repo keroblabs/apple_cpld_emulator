@@ -10,7 +10,7 @@ All tickets initially **OPEN**, pending owner review and implementation assignme
 
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
-| `CPLD-ROM-0001` | TASK | OPEN | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
+| `CPLD-ROM-0001` | TASK | REVIEW | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
 | `CPLD-ROM-0002` | TASK | OPEN | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
 | `CPLD-ROM-0003` | TASK | OPEN | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
 

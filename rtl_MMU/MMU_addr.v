@@ -84,7 +84,7 @@ always @(*) begin
     end else if( ~onboard_fw_n ) begin
         mem_addr_out_reg  = { 2'b00, slot_index, ADDR[11:0] };
     end else begin
-        mem_addr_out_reg  = 16'd0;
+        mem_addr_out_reg  = 17'd0;
     end
 end
 `else
