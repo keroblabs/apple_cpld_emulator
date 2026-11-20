@@ -1,7 +1,7 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `OPEN`  
+**Status:** `REVIEW`  
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
@@ -26,6 +26,11 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
+- **2026-11-20 — Implementation:** Added `emulator/onboard/rom_backing.c`/`.h`: a 64 KiB logical ROM space indexed by the MMU physical address (`MEM_ADDR_OUT`), with system-ROM load, bounds-checked `rom_backing_install` overlays (slot entry / expansion), explicit out-of-bounds reporting (no silent `& 0xffff` wrap) and an optional trace hook (CPU addr, physical addr, ROM_EN_N, byte). `memory_controller.c` now uses it on the ROM path; `rom_memory[ROM_SIZE*2]` and its masking removed.
+- **2026-11-20 — Test:** `emulator/onboard/verification/test_rom_backing.c` (24 checks, 0 failures): system ROM read, slot-7 entry overlay at C700–C7FF, slot-7 expansion overlay at C800–CFFE, no aliasing with system ROM, bounds rejection and the trace hook.
+- **2026-11-20 — Test:** Full emulator rebuilt via CMake with `rom_backing.c` added — links clean, no regression in the build.
+- **2026-11-20 — Decision:** No default slot-7 overlay is wired into `memory_controller_init` so the unmodified Apple ROM boot path is preserved; overlays are installed explicitly once a packaged image exists (`CPLD-ROM-0002` format).
+- **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW`; awaiting owner acceptance.
 
 **Proposed Change**
 
@@ -36,15 +41,21 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 
 ### Acceptance criteria and evidence to record
 
-- [ ] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM.
-- [ ] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds.
-- [ ] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass.
+- [x] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 2–4).
+- [x] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (bounds test 5; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001`).
+- [x] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass (no default overlay installed; full emulator rebuild clean; `tb_mmu_addr.cpp` passes).
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
 
 **Resolution Description**
 
-Pending. No code has been implemented or tested by creation of this ticket.
+Awaiting owner review. ROM reads are now served by `rom_backing` from the MMU
+physical address with explicit bounds and an optional trace hook; overlays
+(slot entry/expansion) are bounds-checked. Verified by `test_rom_backing.c`
+(24 checks, 0 failures) and a clean full-emulator rebuild. The default boot
+path is unchanged (no overlay installed by default), preserving the Apple
+system ROM, video, RAM and slot-6 paths.

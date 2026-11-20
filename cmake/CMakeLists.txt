@@ -40,6 +40,7 @@ set(SOURCE_FILES        ../cpld/rtl_model.cpp
                         ../emulator/onboard/keyboard_controller.c
                         ../emulator/onboard/spi_controller.c
                         ../emulator/onboard/memory_controller.c
+                        ../emulator/onboard/rom_backing.c
                         ../emulator/onboard/iomem_controller.c
 
                         ../emulator/rtl_cpu_65816/rtl_cpu_65816.c

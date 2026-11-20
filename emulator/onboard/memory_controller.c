@@ -4,6 +4,7 @@
 #include "apple2rom.h"
 #include "ram_bus_hw.h"
 #include "disc_drive.h"
+#include "rom_backing.h"
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -12,7 +13,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 static uint8_t ram_memory[ RAM_MEMORY_SIZE ];
-static uint8_t rom_memory[ ROM_SIZE * 2 ];
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -26,7 +26,11 @@ static uint8_t board_read_bus( cpld_data_t * cpld, uint32_t cpu_address )
     }
     else if( !cpld->MMU.rom_en_n )
     {
-        data_xfer = rom_memory[ cpld->MMU.mem_address & 0x0FFFF ];
+        // ROM path is addressed by the MMU's translated physical address
+        // (MEM_ADDR_OUT) with explicit bounds; see rom_backing / ROM-0003.
+        data_xfer = rom_backing_read_traced( cpu_address,
+                                             cpld->MMU.mem_address,
+                                             cpld->MMU.rom_en_n );
     }
     else if( !cpld->MMU.IOSEL_N )
     {
@@ -96,11 +100,10 @@ void memory_controller_init( void )
     // reset main memory
     memset( &ram_memory[0], 0xA0, RAM_MEMORY_SIZE );
 
-    // set default values for rom
-    memset( &rom_memory[0], 0xA0, ROM_SIZE * 2 );
-
-    // load Apple firmware ROM
-    memcpy( &rom_memory[32 * 1024], apple_rom_bin,  sizeof( apple_rom_bin ) );
+    // Initialise the logical ROM space and load the Apple firmware image at its
+    // CPU base ($8000). Slot overlays (e.g. slot 7 ProDOS) may be installed on
+    // top via rom_backing_install once a packaged image exists (ROM-0002/0003).
+    rom_backing_init( apple_rom_bin, sizeof( apple_rom_bin ), 32 * 1024, 0xA0 );
 
     disc_drive_init();
 }
