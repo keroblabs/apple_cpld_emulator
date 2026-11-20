@@ -23,6 +23,19 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 - Existing emulator ROM backing in `emulator/onboard/memory_controller.c` uses `rom_memory[ROM_SIZE * 2]` and an address mask `& 0xFFFF`; it cannot be treated as proof of a working multi-slot flash allocation.
 - ProDOS metadata uses the last bytes of the slot ROM: `$CnFC–$CnFF`; slot 7 metadata must coexist with the boot/driver entry points.
 
+
+### Independent review — 2026-11-20 (changes requested)
+
+The following findings are from inspection of the pushed `mmu-rom-analysis` sources and tests, not independent execution of Verilator or the full emulator. They extend the developer's review evidence without deleting its history.
+
+| Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
+| --- | --- | --- | --- | --- |
+| ROM2-R1 | BLOCKING SPEC CONTRADICTION | `docs/rom-memory-map.md` defines a `.romimg` header and entry table starting at byte 0, but also allocates the SYSTEM ROM payload starting at physical flash byte `0x000000`; these overlap. The magic field says 4 bytes but describes 5-byte `CPROM` truncated to `CPRM`. | Choose a single four-byte magic, reserve physical header/table space, and allocate all payload offsets *after* the table with consistent alignment. Specify whether partition offsets are absolute flash addresses or payload-relative; show a valid example image layout. | OPEN |
+| ROM2-R2 | ADDRESS/CFFF SEMANTICS | `$C800–$CFFE` is listed as 2046 bytes, but inclusive range size is 2047. With `MODE_SEL=1` and `SW_SLOTXROM=1`, CFFF resets the internal slot index but does **not** change the raw-address C800 ROM mapping. | Correct sizes and clearly distinguish CFFF slot-selector release from the always-mapped *onboard* expansion window. State exactly what ROM contents are returned at CFFF and after it, under both modes. | OPEN |
+| ROM2-R3 | SPEC COMPLETENESS | The flash partition table leaves optional slots 1–6 at `0x009000–…`, rather than providing per-slot partitions/offsets. `*.romimg` is described but no loader/packer exists yet. | Give explicit non-overlapping per-slot offset examples and an executable or fully consistent format contract (field order, endianness, CRC algorithm, header/table/payload bounds); track packer implementation in CPLD-ROM-0003 or a new ticket. | OPEN |
+
+**Acceptance assessment:** The format and physical offsets are not yet an unambiguous buildable contract; all three acceptance items require revision.
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -30,6 +43,8 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 - **2026-11-20 — Implementation:** Authored [`docs/rom-memory-map.md`](../../rom-memory-map.md) specifying Apple CPU windows, the emulator 64 KiB logical ROM space, the physical `*.romimg` flash layout/packing format, and the slot-7 ProDOS reservation.
 - **2026-11-20 — Decision:** Grounded the map on the CPLD-ROM-0001 finding that `MEM_ADDR_OUT` equals the raw CPU address under `MODE_SEL=1`; per-slot ROM is addressed by CPU `$Cn00`, and the `$C800–$CFFF` expansion window is a single physical region reserved for slot 7 in the emulator. Hardware multi-card expansion deferred to `CPLD-HW-0001`.
 - **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW`; awaiting owner acceptance of the specification.
+
+- **2026-11-20 — Independent Code Review:** Reviewed `docs/rom-memory-map.md` against current RTL and the approved ticket proposal. Image format cannot be implemented as written because the header/table and system ROM payload overlap at offset zero. Also found a 2047-byte C800–CFFE range error and a CFFF mapping ambiguity. Revision needed prior to accepting this as a locked flash layout.
 
 **Proposed Change**
 
@@ -40,15 +55,15 @@ Define a durable and collision-free ROM image layout for per-slot firmware and t
 
 ### Acceptance criteria and evidence to record
 
-- [x] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location (`docs/rom-memory-map.md` §2–§4).
-- [x] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence (§1, §3; `tb_mmu_addr.cpp` tests 3–5).
-- [x] Image layout can be implemented in the emulator and built for STM32-managed flash without requiring a change to the Apple-visible ROM contents (§3 overlay-after-load, §4–§5 packer contract).
+- [ ] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location (`docs/rom-memory-map.md` §2–§4).
+- [ ] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence (§1, §3; `tb_mmu_addr.cpp` tests 3–5).
+- [ ] Image layout can be implemented in the emulator and built for STM32-managed flash without requiring a change to the Apple-visible ROM contents (§3 overlay-after-load, §4–§5 packer contract).
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `846dd38` | `UNREVIEWED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
+| `mmu-rom-analysis` | `846dd38` | `CHANGES_REQUESTED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
 
 **Resolution Description**
 
@@ -57,3 +72,5 @@ windows, the emulator logical ROM space, and the physical `*.romimg` flash
 layout/packing format, reserving slot 7 for ProDOS. The specification is
 grounded on the verified CPLD-ROM-0001 address behaviour and defers hardware
 multi-card expansion and real-time ROM servicing to `CPLD-HW-0001`.
+
+**Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.

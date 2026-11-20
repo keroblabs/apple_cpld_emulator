@@ -73,6 +73,19 @@ to `17'd0`; behaviour is unchanged (the branch already produced zero).
 | RF-1 | VERIFICATION_REQUIRED | Truth table above; `tb_mmu_addr.cpp`, 47 checks ×2 builds pass | Owner review of locked behaviour | VERIFIED (awaiting acceptance) |
 | RF-2 | CORRECTION_REQUIRED | `16'd0` into 17-bit reg blocked `-Wall` full build | Width literal fixed to `17'd0`; full build now passes | VERIFIED |
 
+
+### Independent review — 2026-11-20 (changes requested)
+
+The following findings are from inspection of the pushed `mmu-rom-analysis` sources and tests, not independent execution of Verilator or the full emulator. They extend the developer's review evidence without deleting its history.
+
+| Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
+| --- | --- | --- | --- | --- |
+| ROM1-R1 | TEST GAP | `tb_mmu_addr.cpp` test 4 samples CFFF and then C800 only with `MODE_SEL=1`, where both addresses remain raw CPU addresses whatever `slot_index_r` contains. | Add `MODE_SEL=0` sequence: select a nonzero slot, inspect translated C800, access CFFF, then inspect translated C800 showing slot index 0; prove first selected-slot access and PHI_0 timing. | OPEN |
+| ROM1-R2 | TEST COVERAGE | The current standalone test only checks slot-entry **start** addresses for slots 1–7, has no explicit C6FF/slot-end external checks, lacks RAM and MMU soft-switch combinations, and does not assert the external expansion `IOSTB_N` path. | Exercise C6FF/C7FF, external IOSEL/IOSTB both polarities, relevant soft-switch and RAM conditions; add a combined co-simulation integration assertion for the phase sampled by `memory_bus_latch`. | OPEN |
+| ROM1-R3 | HARDWARE COMPATIBILITY | `C6XX_N` is derived from C6xx address independently of `rom_enabled`, and may assert at the same time as onboard `ROM_EN_N` for C600 reads. | Document whether C6XX_N is a *decode only* or an external bus enable; make a bus-ownership/mutual-exclusion test for optional external floppy-controller configuration. Coordinate with CPLD-HW-0001. | OPEN |
+
+**Acceptance assessment:** Test coverage and verified-truth-table criteria remain open until those additional tests are supplied.
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -83,6 +96,8 @@ to `17'd0`; behaviour is unchanged (the branch already produced zero).
 - **2026-11-20 — Rework:** Fixed `MMU_addr.v` 17-bit literal width to unblock `-Wall` full-address build (behaviour preserved).
 - **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW` after tests passed; awaiting owner acceptance.
 
+- **2026-11-20 — Independent Code Review:** Source-level review of commits `ac115446` and follow-up ticket hash recording. The 17-bit width fix is appropriate. The 47×2 checks are valid as reported by the developer but do not prove the CFFF latch release: test 4 only compares raw addresses under MODE_SEL=1. Requested additional external-slot transition and decode coverage. No code executed by reviewer.
+
 **Proposed Change**
 
 1. Produce a read/write address truth table and minimal Verilator regression tests for slots 1–7, slot-selection changes, C800/CFFF expansion window, internal ROM/RAM cases and relevant soft-switch combinations.
@@ -91,15 +106,15 @@ to `17'd0`; behaviour is unchanged (the branch already produced zero).
 
 ### Acceptance criteria and evidence to record
 
-- [x] A reviewed table gives selected ROM, physical address, internal/external choice and strobes for every slot ROM region and C800–CFFF (see truth table).
-- [x] Automated tests cover C700/C7FF, C600/C6FF, C800/CFFE/CFFF and changes of selected slot; the C6XX_N compatibility path is preserved (`tb_mmu_addr.cpp` tests 1–6, 10).
-- [x] All ROM enables and MEM_ADDR_OUT values are verified at the phase the emulator samples them; the one RTL defect (17-bit literal width) is separately explained and tested.
+- [ ] A reviewed table gives selected ROM, physical address, internal/external choice and strobes for every slot ROM region and C800–CFFF (see truth table).
+- [ ] Automated tests cover C700/C7FF, C600/C6FF, C800/CFFE/CFFF and changes of selected slot; the C6XX_N compatibility path is preserved (`tb_mmu_addr.cpp` tests 1–6, 10).
+- [ ] All ROM enables and MEM_ADDR_OUT values are verified at the phase the emulator samples them; the one RTL defect (17-bit literal width) is separately explained and tested.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `ac11544` | `UNREVIEWED` | MMU_addr truth-table regression + 17-bit literal width fix |
+| `mmu-rom-analysis` | `ac11544` | `CHANGES_REQUESTED` | MMU_addr truth-table regression + 17-bit literal width fix |
 
 **Resolution Description**
 
@@ -109,3 +124,5 @@ both 5-bit and 17-bit builds, 0 failures). The slot-index translation is
 confirmed dormant under `MODE_SEL=1`; ROM `MEM_ADDR_OUT` equals the CPU
 address. One minor RTL width fix applied (`16'd0` → `17'd0`) with no behaviour
 change. No functional regression introduced.
+
+**Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.

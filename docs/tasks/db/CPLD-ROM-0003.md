@@ -22,6 +22,20 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 - `cpld/rtl_interconnect.cpp` reconstructs MEM_ADDR_OUT physical address from high outputs and CPU lower address bits in the default Verilator configuration.
 - No dedicated packaged slot7 ROM image or per-slot expansion flash map exists in the inspected tree.
 
+
+### Independent review — 2026-11-20 (changes requested)
+
+The following findings are from inspection of the pushed `mmu-rom-analysis` sources and tests, not independent execution of Verilator or the full emulator. They extend the developer's review evidence without deleting its history.
+
+| Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
+| --- | --- | --- | --- | --- |
+| ROM3-R1 | ACCEPTANCE GAP | `rom_backing_install()` permits manual array overlays, but no `.romimg` loader/packer, manifest parser, or board-startup installation of slot7 firmware is implemented. The unit test calls the backing API directly. | Implement or clearly split the specified image-packing/loading task, connect an actual image/fixture to board startup through a documented loading route, and test slot7 ROM bytes as seen by CPU requests through `ROM_EN_N`/`MEM_ADDR_OUT`. | OPEN |
+| ROM3-R2 | UNVERIFIED TEST CLAIM | Ticket checks 'unmodified baseline Apple ROM still boots', but evidence only describes a clean CMake build and a standalone backing unit test. No runtime boot log, screen observation or full combined IOU/MMU test is supplied. | Run and log real boot on the branch, and a combined RTL→memory-controller ROM fetch test including C700, C800, cross-slot and CFFF; do not equate build success with runtime verification. | OPEN |
+| ROM3-R3 | ERROR VISIBILITY | `rom_backing_read()` can report out-of-bounds through its pointer, but the actual memory-controller path uses `rom_backing_read_traced()` which explicitly discards `oob` without reporting it; `idle_fill` silently stands in for the invalid ROM byte. | Make real ROM-path out-of-range read observable via trace/status/assertion or a documented error hook. Unit test must exercise the actual traced path when physical address exceeds 0xFFFF. | OPEN |
+| ROM3-R4 | MAP CONTRACT / INPUT CHECK | `rom_backing_install` only checks global 64 KiB bounds; it accepts installation into unrelated system ROM ranges or overlapping slot windows, although the proposed ROM packer requires segment/type/window validation. | Enforce logical-window/overlap validation at the image installer/packer layer, or narrow the public API to a trusted low-level primitive and test rejecting malformed manifests before modifying the ROM image. | OPEN |
+
+**Acceptance assessment:** Standalone unit test passes as reported by developer; full ticket acceptance must remain unchecked pending image integration and runtime/RTL evidence.
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -32,6 +46,8 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 - **2026-11-20 — Decision:** No default slot-7 overlay is wired into `memory_controller_init` so the unmodified Apple ROM boot path is preserved; overlays are installed explicitly once a packaged image exists (`CPLD-ROM-0002` format).
 - **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW`; awaiting owner acceptance.
 
+- **2026-11-20 — Independent Code Review:** Reviewed `f77b2605` against direct C unit test and build integration. Keeping the new backing abstraction is reasonable. The advertised image loading/packing and CPU-visible slot7 verification are not yet implemented, and the ticket's 'still boots' acceptance is not supported by a recorded runtime test. The traced production read silently discards its own OOB flag.
+
 **Proposed Change**
 
 1. Make ROM data selection depend on ROM_EN_N + decoded physical MEM_ADDR_OUT, not direct CPU Cx address shortcuts. Respect the existing system ROM and RAM choices.
@@ -41,15 +57,15 @@ Provide an emulated flash/ROM address source for selected slot firmware so CPU f
 
 ### Acceptance criteria and evidence to record
 
-- [x] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 2–4).
-- [x] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (bounds test 5; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001`).
-- [x] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass (no default overlay installed; full emulator rebuild clean; `tb_mmu_addr.cpp` passes).
+- [ ] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 2–4).
+- [ ] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (bounds test 5; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001`).
+- [ ] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass (no default overlay installed; full emulator rebuild clean; `tb_mmu_addr.cpp` passes).
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `f77b260` | `UNREVIEWED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
+| `mmu-rom-analysis` | `f77b260` | `CHANGES_REQUESTED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
 
 **Resolution Description**
 
@@ -59,3 +75,5 @@ physical address with explicit bounds and an optional trace hook; overlays
 (24 checks, 0 failures) and a clean full-emulator rebuild. The default boot
 path is unchanged (no overlay installed by default), preserving the Apple
 system ROM, video, RAM and slot-6 paths.
+
+**Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.
