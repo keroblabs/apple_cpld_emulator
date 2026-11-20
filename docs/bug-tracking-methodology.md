@@ -1,13 +1,13 @@
-# Tima/Plus — Task and Bug Tracking Methodology
+# Task and Bug Tracking Methodology
 
-**Document status:** Working process, initial issue-register version (18 November 2026)
-**Applies to:** All Tima/Plus implementation tasks, defects, improvements, reviews, and resolutions
-**Location:** `docs/tasks/bug-tracking-methodology.md`
-**Source:** Copied and adapted from [Tima bug-tracking-methodology.md — phase-1-improvements](https://github.com/keroblabs/tima/blob/phase-1-improvements/docs/bugs/bug-tracking-methodology.md), source blob `7d68621b656774aec4e54d97d196cd85178332db`.
+**Document status:** Generic engineering process (20 November 2026)
+**Applies to:** Any project adopting this ticket, implementation and review workflow
+**Location in this repository:** `docs/bug-tracking-methodology.md`
+**Adoption:** Define project-specific ID prefixes, work categories and milestone conventions before opening tickets. Keep those choices in the project's master task index, not in this reusable methodology.
 
 ## 1. Purpose and guiding principles
 
-This document defines how we identify, describe, discuss, fix, review, and close defects and engineering improvements in Tima/Plus. The tracker is part of the repository and is the durable record of decisions, not merely a to-do list.
+This document defines how we identify, describe, discuss, fix, review, and close defects and engineering improvements in a project. The tracker is part of the repository and is the durable record of decisions, not merely a to-do list.
 
 - **Review before change.** A finding is recorded before implementation, and its proposed remedy is not automatically approved.
 - **Preserve history.** Historical snapshots and reference branches remain unchanged; fixes and improvements belong on an explicitly designated working branch. Never rewrite a preserved baseline as part of issue resolution.
@@ -24,19 +24,22 @@ This document defines how we identify, describe, discuss, fix, review, and close
 ## 2. Files and ticket ownership
 
 ```text
-docs/tasks/
-├── bug-tracking-methodology.md     # Method, lifecycle, review rules
-├── task_list.md                    # One master list: category, ID, kind, status, title
-└── db/
-    ├── PLUS-EMU-0004.md            # Exactly one complete record
-    └── PLUS-<AREA>-NNNN.md         # One record per later opened ticket
+docs/
+├── bug-tracking-methodology.md     # Generic workflow and review rules
+└── tasks/
+    ├── task_list.md                # One master list: category, ID, kind, status, title
+    └── db/
+        ├── PRJ-CORE-0001.md        # Illustrative per-ticket record
+        └── <PROJECT>-<AREA>-NNNN.md # One file per opened ticket
 ```
+
+The `PRJ-CORE-0001` example is illustrative only, not a reserved ID. A project may put this methodology elsewhere if it updates references accordingly; the index and ticket structure remain the same.
 
 **`task_list.md` is the only summary/index.** Group by category and sort by permanent ID. Each row must identify `ID`, `Kind`, `Status`, `Title`, `Milestone`, and link directly to its canonical ticket file. The index must never duplicate full technical descriptions.
 
 **`db/<ID>.md` is the authoritative record.** Every file contains exactly one ticket, its detailed design/evidence, chronological Notes, Commits and Resolution Description. No 16-ticket limits, no split category volumes, and no second index files. Very detailed tickets are expected.
 
-**Existing ID allocation:** The Tima/Plus [roadmap](../01-development-roadmap.md) defines `PLUS-DEV` (end-to-end programme), `PLUS-EMU` (uMac/Musashi, Macintosh hardware, Unicorn and debugging), and `PLUS-SYS` (OS, bootstrap, programmer, SDK and desktop). Preserve the IDs already assigned there. A roadmap mention is a **planned item**, not an opened ticket; create its individual record and master-index row simultaneously when formally raised.
+**Project setup and existing IDs:** Choose a permanent project prefix and primary category codes, and document them in `docs/tasks/task_list.md`. If a project already has a roadmap or issue scheme assigning IDs, preserve those IDs; do not silently rename them to match an example here. A roadmap mention is a **planned item**, not an opened ticket; create its individual record and master-index row simultaneously when formally raised. If the project has no formal roadmap, use `Not assigned` in the Milestone field until a milestone is agreed.
 
 **Kind:** `BUG` (confirmed or suspected defect, including a missing mandatory hardware capability), `TASK` (bounded planned implementation), or `IMPROVEMENT` (optional refinement). Label unverified claims; absence of a feature is not automatically an upstream regression.
 
@@ -44,13 +47,13 @@ Each ticket belongs to one primary category. Related concerns should link to eac
 
 ## 3. Ticket identification
 
-IDs have the form `PLUS-<AREA>-NNNN` (e.g. `PLUS-EMU-0004`, `PLUS-DEV-0001`, `PLUS-SYS-0006`).
+IDs have the form `<PROJECT>-<AREA>-NNNN`, with fixed project and category prefixes and a four-digit increasing sequence. For example, `PRJ-CORE-0001` and `PRJ-HW-0002` are *format examples*, not prescribed prefixes.
 
 - Numbers and existing roadmap IDs are permanent; never reuse, rename, recycle or renumber them. New numbers increase within each category without reset.
 - Each newly opened ticket gets exactly one canonical `docs/tasks/db/<ID>.md` file, and exactly one row under its category in `task_list.md`.
 - Changing a title/status/kind/category does not change the ID or the canonical filename. Update the master row in the same commit, recording any reclassification in Notes.
 - Commit messages, reviews, testing evidence and cross-ticket references should use the permanent ID.
-- The roadmap is the place for programme sequencing; the tracker is the place for active issue decisions and verified dispositions.
+- The roadmap, when used, is the place for programme sequencing; the tracker is the place for active issue decisions and verified dispositions.
 
 ## 4. Status model
 
@@ -73,18 +76,18 @@ Issues may be closed without code changes only when the disposition (for example
 
 ### Master index — `docs/tasks/task_list.md`
 
-Header and methodology link, then sections for `PLUS-DEV`, `PLUS-EMU`, and `PLUS-SYS`. A category with no formally raised tickets says so explicitly. Each category with tickets has a Markdown table with **exactly six columns:** `ID`, `Kind`, `Status`, `Title`, `Milestone`, and `Ticket`. The ID and/or Ticket cells link to `db/<ID>.md`. Sort by ID.
+Header and link to this methodology, then a category-code legend and sections for the project's declared categories. A category with no formally raised tickets says so explicitly. Each category with tickets has a Markdown table with **exactly six columns:** `ID`, `Kind`, `Status`, `Title`, `Milestone`, and `Ticket`. The ID and/or Ticket cells link to `db/<ID>.md`. Sort by ID.
 
-Each row is a compact *current index*. It is not the place for discussion, reproduction steps, acceptance tests, resolution notes or commits. Add/delete no ticket without updating the index and the corresponding individual file together. Keep archived and closed tickets in the index. Roadmap-only, unopened IDs need no row or placeholder file.
+Each row is a compact *current index*. It is not the place for discussion, reproduction steps, acceptance tests, resolution notes or commits. Add/delete no ticket without updating the index and the corresponding individual file together. Keep archived and closed tickets in the index. Roadmap-only, unopened IDs need no row or placeholder file. For projects without milestones, put `Not assigned` in the Milestone column rather than removing the column.
 
 ### Individual ticket — `docs/tasks/db/<ID>.md`
 
 Each file has a heading and **one ticket**, with these required fields *in this exact order*: **ID, Status, Title, Description, Details, Notes, Proposed Change, Commits, Resolution Description**. Technical subsections can be nested in Details or Proposed Change; there is no length cap.
 
 ```markdown
-# PLUS-XXX-0001 — <Title>
+# PRJ-CORE-0001 — <Title>
 
-**ID:** `PLUS-XXX-0001`
+**ID:** `PRJ-CORE-0001`
 **Status:** `OPEN`
 **Title:** <Title>
 
@@ -93,8 +96,8 @@ Each file has a heading and **one ticket**, with these required fields *in this 
 
 **Details**
 - Kind: BUG / TASK / IMPROVEMENT
-- Category: PLUS-XXX
-- Milestone: related roadmap ID
+- Category: PRJ-CORE
+- Milestone: related roadmap ID, or Not assigned
 <Relative paths, code evidence, hypotheses, expected behavior,
 dependencies, constraints, reproduction and test plan.>
 
@@ -180,10 +183,10 @@ A single commit may be listed in more than one ticket when it genuinely addresse
 
 1. **Discover:** inspect the relevant code or baseline and register an `OPEN` ticket with evidence or a clearly marked hypothesis. Create the `db/<ID>.md` file and index row together.
 2. **Triage together:** decide whether it is a real defect, a safety or portability risk, historical residue, or an improvement worth making. Clarify expected behavior and scope; log the decision.
-3. **Agree on a proposed change:** examine alternatives and dependencies, particularly public API, ownership, nonblocking behavior, interrupt masking, allocator use, and affected boards. If the change is not agreed, keep the issue open or defer it.
+3. **Agree on a proposed change:** examine alternatives and dependencies, particularly externally visible interfaces, state transitions, timing, concurrency, memory or resource ownership, dependencies, compatibility, and affected target environments. If the change is not agreed, keep the issue open or defer it.
 4. **Implement and commit locally:** work only on the designated working branch; make focused changes and reference ticket IDs. Finish by running `git commit` locally (for the implementation, tests and related task-record updates). Record each relevant local commit in the issue's Commits table as `UNREVIEWED` and report the SHA(s). **Do not run `git push`, publish a branch, create a PR or merge; stop at the local commit and hand the result to the reviewer/owner.** Do not modify preserved historical baselines.
-5. **Verify:** add or run relevant native tests, build checks, static review, and board/ISR-specific checks as appropriate. Record exactly what passed, failed, or could not be tested. A build alone is not proof of interrupt safety.
-6. **Review:** set the issue to `REVIEW`, review relevant commits, update their review statuses, and examine implementation, API behavior, edge cases, ownership, interrupt-state restoration, error paths, and evidence. Log review findings and rework.
+5. **Verify:** add or run relevant native tests, build checks, static review, and board/ISR-specific checks as appropriate. Record exactly what passed, failed, or could not be tested. A build alone is not proof of functional correctness, timing correctness or concurrency safety.
+6. **Review:** set the issue to `REVIEW`, review relevant commits, update their review statuses, and examine implementation, interface behavior, edge cases, state transitions, ownership, timing, concurrency where applicable, error paths, and evidence. Log review findings and rework.
 7. **Accept and close:** after explicit approval, set `RESOLVED` with a complete resolution; set `CLOSED` once integrated into the designated branch or the approved no-change disposition is complete. Update `task_list.md` at each transition.
 
 If a test later exposes a regression, reopen the original issue when it concerns the same root cause; otherwise open a new issue and cross-reference it.
@@ -212,7 +215,7 @@ Document which tests **passed**, were **reported by another developer but not in
 - Keep dated append-only Notes and superseded commit records. Do not silently erase prior decisions or transfer review approval to a different SHA.
 - Require a local `git commit` for every developer change; **never `git push` from the developer workflow**. Publication, PRs and merges are project-owner actions after review.
 - Implementations require explicit acceptance evidence; a successful compile alone is not proof of hardware correctness or enough to close a ticket.
-- Preserve the shared Tima 6.x SDK and its ownership boundaries; emulator-specific concerns stay with the emulator.
+- Preserve the project's agreed architectural boundaries, upstream dependencies and compatibility requirements. Do not conflate independent subsystems merely because they are integrated or tested together.
 
 ## 11. Maintaining this methodology
 
