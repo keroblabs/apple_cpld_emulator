@@ -14,7 +14,6 @@ extern "C" {
 #define LCD_WIDTH					_USE_SCREEN_WIDTH
 #define LCD_HEIGHT					_USE_SCREEN_HEIGHT
 
-#define ROM_SIZE					32768
 #define MEMORY_AUX_BANK				0x10000
 #define MEM_GS_VIDEO_CHAR_MAP       0x20000
 #define MEM_IO_REGION_ADDR          0x0C000
