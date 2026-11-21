@@ -56,6 +56,7 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `cpld-hw-0001-0003-tickets` | `17ea4c6` | `UNREVIEWED` | Fix five-bit SPI selector decoding and extra-clock counter replay; add failing-before/passing-after Verilator tests, integration coverage, timing contract and VCD evidence. |
 
 **Resolution Description**
 
