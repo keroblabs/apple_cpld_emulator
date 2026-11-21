@@ -1,6 +1,8 @@
 # ROM and Expansion-ROM Memory Map (CPLD-ROM-0002)
 
-**Status:** Specification for review — rev 2 (2026-11-21, branch `mmu-rom-analysis`).
+**Final ROM release constraint:** [Single DIP32 raw flash image contract](rom-flash-image-contract.md) — one headerless binary, also loaded unchanged by the emulator. The `*.romimg` material below describes an **optional development container only**, not programmer data.
+
+**Status:** Specification for review — rev 2 logical address map; final binary requirement added 2026-11-21 (branch `mmu-rom-analysis`).
 **Methodology:** [Task and Bug Tracking Methodology](tasks/bug-tracking-methodology.md).
 **Owning ticket:** [`CPLD-ROM-0002`](tasks/db/CPLD-ROM-0002.md).
 **Depends on:** [`CPLD-ROM-0001`](tasks/db/CPLD-ROM-0001.md) (verified address behaviour),
@@ -13,8 +15,7 @@ strictly separate:
 
 1. **Apple CPU address space** — the `$Cxxx`/`$Dxxx`–`$Fxxx` windows the 65C816
    presents on `ADDR[15:0]`.
-2. **Physical ROM-image space** — the byte offsets of the packed image the
-   emulator stores and serves (and later the STM32-managed serial flash).
+2. **Physical ROM byte-address space** — the byte locations returned by the real DIP32 ROM (and the emulator in raw-image mode). A metadata-bearing `*.romimg` development container has separate *file offsets*; the STM32's serial flash is separate storage.
 
 > **Rev 2 — key change (owner directive).** IO firmware ROM is organised into a
 > **4 KiB window per slot**. The first 2 KiB of each window holds the slot's
@@ -127,7 +128,11 @@ Baselines are **not** occupancy-marked, so a packaged image (below) may override
 any slot window. Explicit installs are overlap-checked against each other and
 against the system region.
 
-## 4. Packed `*.romimg` image format (corrects rev-1 ROM2-R1/R3)
+## 4. Development container: packed `*.romimg` (NOT the DIP32 programmer image)
+
+**Release distinction:** The `CPRM` header/table format described in this section is a *development container*. The physical DIP32 device must instead be programmed with the **single raw, headerless binary** defined in [the DIP32 flash image contract](rom-flash-image-contract.md). In that final binary, file offset = physical ROM address, with no container/header/table or per-slot file-offset translation. The emulator must load that identical raw binary in dedicated raw-flash mode. Section 4.2's STM32 serial-flash offset examples must not be used as raw DIP32 ROM offsets.
+
+Current implementation of this development container is under review: version, checksum and table/payload validation, all-or-nothing installs, and SYSTEM replacement policy are outstanding in `CPLD-ROM-0003`.
 
 Single contiguous image; **little-endian**. The header and entry table occupy
 the start of the file; **all payloads follow the table** (no overlap with
@@ -180,10 +185,9 @@ first payload starts at `0x0038` — strictly after the table (no offset-0
 overlap, resolving ROM2-R1). Partition/payload offsets above are **payload-file
 offsets** (absolute within the `.romimg`), not flash addresses.
 
-### 4.2 Physical flash partitioning (STM32-managed)
+### 4.2 Historical STM32 serial-flash partition examples (NOT the DIP32 ROM map)
 
-Flash storage is separate from the CPU-readable path; real-time ROM servicing is
-specified in `CPLD-HW-0001` (no assumption of synchronous serial-flash reads).
+These example offsets refer **only** to hypothetical STM32-managed serial-flash storage; they are **not** the offsets used by the directly addressed DIP32 ROM. The DIP32's raw byte map is 0x0000–0xFFFF as specified in the single-image contract. The final ROM bus topology and part number remain in `CPLD-HW-0001`.
 Suggested erase-aligned (4 KiB) flash partitions, per slot:
 
 | Partition | Flash offset (example) | Kind | Apple base | Max length |
@@ -196,6 +200,12 @@ Suggested erase-aligned (4 KiB) flash partitions, per slot:
 
 Erased/padding value in physical flash is `0xFF`; the emulator fills unused
 logical ROM with `0xA0` (idle-bus convention) before applying baselines/overlays.
+
+### 4.3 Release output — one physical DIP32 flash image
+
+Build one `apple_cpld_flash.bin`-style raw file from the system ROM and all slot entry/expansion sources. For the present MMU's 16-bit decoded ROM map, **each offset in `0x0000–0xFFFF` corresponds exactly to that physical ROM address** (64 KiB). This file contains slot 6's migrated C6xx bytes at `0x6600`, slot 7's 256-byte entry at `0x7700`, its expansion at `0x7800`, and the system ROM at `0x8000` onwards. Every unused byte has a deterministic fill value. The target DIP32 chip's actual capacity, A16/high-address wiring and programmer image size must be verified in `CPLD-HW-0001`; if larger than the decoded space, specify the high-bank contents and produce a single full-device image as required.
+
+The **same raw bytes** must be the sole emulator ROM contents in release-test mode; the existing `memory_controller_init()` baseline migration/`*.romimg` overlays cannot count as a release-image test. Retain a separate SHA-256 manifest and compare to complete-chip programmer readback when physical hardware is available. Implementation and acceptance: [`CPLD-ROM-0004`](tasks/db/CPLD-ROM-0004.md).
 
 ## 5. ProDOS slot-7 metadata
 
@@ -220,4 +230,4 @@ points packed into `$C700–$C7FB` (`$7700–$77FB`); layout detail in
   ownership: `CPLD-HW-0001`.
 - Slot-7 ProDOS entry-point/signature byte layout within `$C700–$C7FF`:
   `CPLD-FW-0001`.
-- Emulator loader/packer and tests: `CPLD-ROM-0003` (implemented).
+- Development-container `*.romimg` loader: `CPLD-ROM-0003` (implemented, outstanding validation review). **Single raw programmer binary and exact emulator raw mode:** `CPLD-ROM-0004` (not yet implemented).

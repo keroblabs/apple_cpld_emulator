@@ -24,10 +24,18 @@ Formalise the physical division of labour: STM32 acts as SPI master for the CPLD
 
 **Notes**
 
+- **2026-11-21 — Owner directive / DIP32 single-image handoff:** The hardware has a **DIP32 flash device for directly accessed ROM**, programmed from one raw binary; this must be distinguished from STM32-owned SPI flash (e.g. disk/media or ancillary storage) and RTC. Earlier language describing only STM32 serial flash as the physical ROM source is not a settled hardware design. Identify the flash chip, address/data pins, voltage, capacity, CE/OE/WE and programming/readback requirements.
+
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 
 **Proposed Change**
+
+### Mandatory DIP32 flash-image integration
+
+The hardware topology should place the DIP32 ROM on the `MEM_ADDR_OUT` / `ROM_EN_N` / CPU data read path (or explicitly document any intervening logic) and establish electrical timing. Specify programmer input capacity, address-line wiring, high-bank selection/padding, and bus contention avoidance. The emulator shall run the exact byte image that is programmed to that chip.
+
+**Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
 1. Document a hardware block diagram and the exact direction/voltage/timing/ownership of STM32↔CPLD SPI control, RTC and flash, CPU memory bus, ROM_EN_N, MEM_ADDR_OUT and DATA bus.
 2. Compare feasible ROM serving approaches (e.g. direct parallel ROM/SRAM mapped to CPLD address outputs, SRAM shadow preloaded from serial flash, or STM32 parallel read service with demonstrably acceptable latency). Select one by measured/derived CPU-cycle requirements and hardware pins.
@@ -39,6 +47,10 @@ Formalise the physical division of labour: STM32 acts as SPI master for the CPLD
 - [ ] Agreed topology states STM32 SPI master, RTC and SPI flash ownership and how reads of physical ROM addresses return CPU bytes in time.
 - [ ] No unstated assumption that the STM32 can stream arbitrary flash reads synchronously at CPU cycle speed.
 - [ ] Required address/data/control nets, external slot6 coexistence and reset/boot image ownership are documented.
+
+### Single-image acceptance gate (added 2026-11-21)
+
+- [ ] A concrete DIP32 flash part, electrical address/enable mapping and full-chip raw image length are documented, with readback procedure linked to ROM-0004.
 
 **Commits**
 

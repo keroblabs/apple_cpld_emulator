@@ -56,6 +56,8 @@ These concerns do not invalidate the per-slot geometry. The documentation/format
 
 **Notes**
 
+- **2026-11-21 — Owner directive / DIP32 single-image handoff:** The per-slot 4 KiB logical map stays intact, but the deliverable is **one raw DIP32 flash file** whose offsets *are physical ROM addresses*. A `CPRM`/metadata-bearing `*.romimg` is only a development container; it MUST NOT be treated as a programmer-ready image or loaded as a substitute during final emulator verification.
+
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 - **2026-11-20 — Implementation:** Authored [`docs/rom-memory-map.md`](../../rom-memory-map.md) specifying Apple CPU windows, the emulator 64 KiB logical ROM space, the physical `*.romimg` flash layout/packing format, and the slot-7 ProDOS reservation.
@@ -71,6 +73,12 @@ These concerns do not invalidate the per-slot geometry. The documentation/format
 
 **Proposed Change**
 
+### Mandatory DIP32 flash-image integration
+
+The documented logical ROM arrangement is the basis of a single programmer binary. Define complete raw physical byte offsets, chip-size/high-bank/padding policy after part confirmation, and explicitly distinguish the optional intermediate `*.romimg` from the **headerless** binary. Where the old §4.2 STM32 serial-flash partition offsets differ from physical DIP32 byte addresses, the latter take precedence for this deliverable.
+
+**Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
+
 1. Create `docs/rom-memory-map.md` giving **for each slot 1–7**: Apple address region, how the slot is selected, CPU IOSEL/IOSTB range, MEM_ADDR_OUT representation, ROM_EN_N behaviour, physical flash partition/offset and image filename/build section.
 2. Explicitly state whether each selected slot receives one 2 KiB expansion page, multiple banks, or no expansion ROM; budget space, indicate alignment, erased/padding values, and the ROM image packing/build tool format.
 3. Specify ownership of `$C800–$CFFF`, `$CFFF` release, bank switch semantics, slot 6 external-controller coexistence, and internal firmware soft-switch selection. Reserve slot 7 for ProDOS boot and IOMEM firmware.
@@ -81,6 +89,10 @@ These concerns do not invalidate the per-slot geometry. The documentation/format
 - [x] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location (`docs/rom-memory-map.md` rev 2 §2, §2.1, §3, §4.1).
 - [x] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence (§1, §2.1; `tb_mmu_addr.cpp` tests 3–5).
 - [ ] The 4 KiB-per-slot logical layout is implemented; the packed format remains pending review of ROM2-R4/R6 (worked offsets, version/CRC/table bounds and SYSTEM policy). Emulator smoke-run/`PR#3`/`PR#0` verified by owner.
+
+### Single-image acceptance gate (added 2026-11-21)
+
+- [ ] The final raw flash image specification and contents match the per-slot physical MMU map byte-for-byte and are unambiguous for the chosen DIP32 chip.
 
 **Commits**
 

@@ -58,6 +58,8 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 
 **Notes**
 
+- **2026-11-21 — Owner directive / DIP32 single-image handoff:** Developer must support loading **the identical raw file sent to the DIP32 programmer** into the emulator. The current `rom_backing_init` + baseline migration + `*.romimg` overlays remain development-only and do not demonstrate raw-image equivalence. Existing owner `PR#3` / `PR#0` verification remains valid for baseline mode, but must be repeated in raw-image mode.
+
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 - **2026-11-20 — Implementation:** Added `emulator/onboard/rom_backing.c`/`.h`: a 64 KiB logical ROM space indexed by the MMU physical address (`MEM_ADDR_OUT`), with system-ROM load, bounds-checked `rom_backing_install` overlays (slot entry / expansion), explicit out-of-bounds reporting (no silent `& 0xffff` wrap) and an optional trace hook (CPU addr, physical addr, ROM_EN_N, byte). `memory_controller.c` now uses it on the ROM path; `rom_memory[ROM_SIZE*2]` and its masking removed.
@@ -77,6 +79,12 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 
 **Proposed Change**
 
+### Mandatory DIP32 flash-image integration
+
+Add a raw-flash load mode that seeds the ROM backing array exclusively from the supplied image, not from `apple_rom_bin`, slot-entry copying, expansion replication or later overlays. Read every byte through the normal MMU `ROM_EN_N` + `MEM_ADDR_OUT` path, assert the expected file length and verify byte-for-byte determinism. Raw image composition and complete physical flash acceptance are tracked in ROM-0004.
+
+**Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
+
 1. Make ROM data selection depend on ROM_EN_N + decoded physical MEM_ADDR_OUT, not direct CPU Cx address shortcuts. Respect the existing system ROM and RAM choices.
 2. Implement image loading/packing for slot7 and other configured slots using the reviewed map; ensure physical ROM capacity, bank selection, bounds and ROM holes are explicit, with no silent wrapping by `& 0xffff`.
 3. Add emulator-visible traces for CPU address, physical ROM address, ROM_EN_N and returned byte, and unit tests for the C700 and C800 windows.
@@ -87,6 +95,10 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 - [x] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 3, 5, 8).
 - [x] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (test 6 OOB on traced path; test 8 CFFF release to slot 0; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001` test 4).
 - [x] Baseline Apple emulator operates after ROM remapping; owner manually verified the emulator and Applesoft `PR#3` / `PR#0` on 2026-11-21. Developer reports MMU regression tests passed in both builds. This does **not** imply ProDOS slot-7 boot or hardware verification.
+
+### Single-image acceptance gate (added 2026-11-21)
+
+- [ ] The exact single programmer-ready image boots in raw mode and passes repeated `PR#3`/`PR#0` and per-slot ROM regression without runtime overlays.
 
 **Commits**
 

@@ -24,10 +24,18 @@ Exercise the whole path with real ROM fetch and Apple 65816 execution: ROM_EN_N/
 
 **Notes**
 
+- **2026-11-21 — Owner directive / DIP32 single-image handoff:** Final integrated ProDOS/IOMEM test must use the exact **single raw DIP32 flash image** selected for programming, not reconstructed `apple_rom_bin` + patches. Keep image hash and emulator-mode evidence separate from the old `PR#3`/`PR#0` baseline verification.
+
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 
 **Proposed Change**
+
+### Mandatory DIP32 flash-image integration
+
+The test harness boots the emulator using the programmer-ready binary as the ROM backing, verifies expected slot6 and slot7 bytes, runs ProDOS block reads, and records the binary's SHA-256; later hardware readback must match that same file.
+
+**Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
 1. Automate ROM address testcases, SPI/IOMEM command traces and exact block-data integrity, then boot a known compatible ProDOS image on slot7. Identify the actual boot selection and relevant CPU call traces.
 2. Test ProDOS STATUS/READ, filesystem directory listing, repeated block reads, invalid block/media status and, only if enabled, safe block writes to a disposable image.
@@ -40,6 +48,10 @@ Exercise the whole path with real ROM fetch and Apple 65816 execution: ROM_EN_N/
 - [ ] 512-byte read correctness verified end to end; repeated reads and error paths do not deadlock, overwrite queues or corrupt memory.
 - [ ] Slot6 and keyboard regressions pass and results are attached to the ticket, with named test environment and commit SHA.
 - [ ] Review approval required before marking RESOLVED or merging.
+
+### Single-image acceptance gate (added 2026-11-21)
+
+- [ ] Successful ProDOS slot7 boot and IOMEM 512-byte transfer are observed with emulator raw-image mode using the same byte image intended for physical programming.
 
 **Commits**
 

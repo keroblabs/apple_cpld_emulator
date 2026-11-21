@@ -2,9 +2,9 @@
 
 **Status:** Initial hard-disk programme tickets opened 2026-11-20 on `rtl-rework`.  
 **Methodology:** [Task and Bug Tracking Methodology](bug-tracking-methodology.md).  
-**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service; STM32 SPI master, RTC/flash owner; **no new CPLD SPI master**.
+**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service; STM32 SPI master and RTC/serial-flash owner; **separate DIP32 hardware ROM programmed with one raw flash binary**; no new CPLD SPI master. [Authoritative raw ROM image contract](../rom-flash-image-contract.md).
 
-All tickets initially **OPEN**, pending owner review and implementation assignment. See each ticket's detailed dependencies and acceptance criteria. Core workstreams: **M1** ROM mapping and hardware ROM-read strategy → **M2** slot7 ProDOS firmware; **M3** IOMEM protocol and hard-disk service can proceed alongside M1/M2 → **M4** image integration and ProDOS boot verification.
+The task rows below give the current status of each ticket; design and implementation approvals are tracked in each individual ticket. See each ticket's detailed dependencies and acceptance criteria. Core workstreams: **M1** ROM mapping and hardware ROM-read strategy → **M2** slot7 ProDOS firmware; **M3** IOMEM protocol and hard-disk service can proceed alongside M1/M2 → **M4** image integration and ProDOS boot verification.
 
 ## CPLD-ROM — ROM mapping and flash layout
 
@@ -13,6 +13,7 @@ All tickets initially **OPEN**, pending owner review and implementation assignme
 | `CPLD-ROM-0001` | TASK | REVIEW | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
 | `CPLD-ROM-0002` | TASK | REVIEW | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
 | `CPLD-ROM-0003` | TASK | REVIEW | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
+| `CPLD-ROM-0004` | TASK | OPEN | Produce and emulate one programmer-ready DIP32 flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
 
 ## CPLD-HW — STM32 / CPLD hardware topology
 
