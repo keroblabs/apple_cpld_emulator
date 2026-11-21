@@ -73,6 +73,7 @@ CPLD/STM32 ROM service design using these addressed bytes.
 | `mmu-rom-analysis` | `846dd38` | `SUPERSEDED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
 | `mmu-rom-analysis` | `26f6c06` | `SUPERSEDED` | rom-memory-map.md rev 2: 4 KiB/slot windows, format/CFFF fixes |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
+| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Specify the 256 KiB backing and each raw slot binary's file and memory offsets |
 
 **Resolution Description**
 

@@ -98,6 +98,7 @@ ROM and these windows share the 256 KiB address space specified in
 | `mmu-rom-analysis` | `ac11544` | `SUPERSEDED` | MMU_addr truth-table regression + 17-bit literal width fix |
 | `mmu-rom-analysis` | `7e1df68` | `SUPERSEDED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
+| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Decode the raw 4 KiB slot windows and test both MMU builds and the combined bus |
 
 **Resolution Description**
 

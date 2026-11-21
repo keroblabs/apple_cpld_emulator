@@ -80,6 +80,7 @@ Use raw firmware bytes as specified in [CPLD-ROM-0002](CPLD-ROM-0002.md).
 | `mmu-rom-analysis` | `f77b260` | `SUPERSEDED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
 | `mmu-rom-analysis` | `3c4468c` | `SUPERSEDED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
+| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
 
 **Resolution Description**
 
