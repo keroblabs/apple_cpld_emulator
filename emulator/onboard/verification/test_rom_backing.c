@@ -1,5 +1,6 @@
-// CPLD-ROM-0003. Verify raw ROM copies, slot isolation and backing bounds.
+// CPLD-ROM-0003/0004. Check the default compiled image and its exact export.
 #include "rom_backing.h"
+#include "apple2rom.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -16,17 +17,35 @@ static void check(int condition, const char *message)
     }
 }
 
-static void check_region(uint32_t base, const uint8_t *expected, size_t len)
+static void check_backing(const uint8_t *expected)
 {
     ++checks;
-    for (size_t i = 0; i < len; ++i) {
-        const uint8_t byte = rom_backing_read(base + i, NULL);
-        if (byte != expected[i]) {
+    for (uint32_t address = 0; address < ROM_BACKING_SIZE; ++address) {
+        const uint8_t byte = rom_backing_read(address, NULL);
+        if (byte != expected[address]) {
             ++failures;
-            printf("FAIL at $%05zX: got $%02X, expected $%02X\n", base + i, byte, expected[i]);
+            printf("FAIL at $%05X: got $%02X, expected $%02X\n", address, byte, expected[address]);
             return;
         }
     }
+}
+
+static void check_export(const char *path, const uint8_t *expected)
+{
+    static uint8_t actual[ROM_BACKING_SIZE];
+    FILE *file = fopen(path, "rb");
+    check(file != NULL, "open the exported image");
+    if (!file) {
+        return;
+    }
+
+    const size_t count = fread(actual, 1, sizeof(actual), file);
+    check(count == sizeof(actual) && fgetc(file) == EOF && !ferror(file),
+          "export contains exactly 262144 bytes");
+    fclose(file);
+
+    check(memcmp(actual, expected, sizeof(actual)) == 0,
+          "export matches the Apple ROM and zero-filled slot and reserved areas");
 }
 
 static void capture_oob(uint32_t cpu_addr, uint32_t phys_addr,
@@ -37,113 +56,37 @@ static void capture_oob(uint32_t cpu_addr, uint32_t phys_addr,
     traced_oob = oob;
 }
 
-static int write_image(const char *path, const uint8_t *bytes, size_t length)
-{
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return 0;
-    }
-    size_t written = fwrite(bytes, 1, length, file);
-    return fclose(file) == 0 && written == length;
-}
-
-static void check_raw_file(const char *path, const uint8_t *system_rom,
-                           const uint8_t *slot)
-{
-    static uint8_t image[ROM_BACKING_SIZE + 1];
-    for (size_t i = 0; i < sizeof(image); ++i) {
-        image[i] = (uint8_t)(i ^ (i >> 8) ^ (i >> 16));
-    }
-    memcpy(image, "CPRM", 4);
-
-    check(rom_backing_load_raw_file(path) == -1, "reject a missing raw file");
-    check(write_image(path, image, ROM_BACKING_SIZE - 1), "write short raw fixture");
-    check(rom_backing_load_raw_file(path) == -1, "reject truncated raw file");
-    check(write_image(path, image, sizeof(image)), "write long raw fixture");
-    check(rom_backing_load_raw_file(path) == -1, "reject trailing bytes");
-    check_region(ROM_SYSTEM_BASE, system_rom, ROM_SYSTEM_SIZE);
-    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == 0,
-          "invalid file leaves development mode intact");
-
-    check(write_image(path, image, ROM_BACKING_SIZE), "write complete raw fixture");
-    check(rom_backing_load_raw_file(path) == 0, "load exactly 256 KiB after a failed load");
-    check_region(0, image, ROM_BACKING_SIZE);
-    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == -1, "raw mode rejects a slot overlay");
-
-    check(write_image(path, slot, ROM_SLOT_SIZE), "write a component file as invalid raw input");
-    check(rom_backing_load_raw_file(path) == -1, "raw mode rejects a partial replacement");
-    check_region(0, image, ROM_BACKING_SIZE);
-    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == -1, "failed replacement preserves raw mode");
-
-    rom_backing_init(system_rom);
-    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == 0,
-          "development initialization restores slot loading");
-}
-
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "Expected a temporary raw ROM output path\n");
+    if (argc != 3) {
+        fprintf(stderr, "Expected a temporary image path and a directory to test export failure\n");
         return 1;
     }
 
-    static uint8_t system_rom[ROM_SYSTEM_SIZE];
-    static uint8_t slots[7][4096];
+    static uint8_t expected[0x40000];
+    memcpy(expected + 0x08000, apple_rom_bin, sizeof(apple_rom_bin));
+    rom_backing_init();
+    check(ROM_BACKING_SIZE == sizeof(expected), "256 KiB backing size");
+    check_backing(expected);
 
-    for (size_t i = 0; i < sizeof(system_rom); ++i) {
-        system_rom[i] = (uint8_t)(i ^ (i >> 8));
-    }
-    for (int slot = 1; slot <= 7; ++slot) {
-        for (size_t i = 0; i < sizeof(slots[0]); ++i) {
-            slots[slot - 1][i] = (uint8_t)(slot * 17 + (i ^ (i >> 8)));
-        }
-    }
-    // These bytes are payload too.
-    memcpy(slots[6], "CPRM", 4);
-
-    rom_backing_init(system_rom);
-    check(ROM_BACKING_SIZE == 256 * 1024, "256 KiB backing size");
-    check_region(0x08000, system_rom, sizeof(system_rom));
-    check(rom_backing_read(0x07000, NULL) == 0, "slot entry starts empty");
-    check(rom_backing_read(0x07800, NULL) == 0, "slot expansion starts empty");
-
-    for (int slot = 1; slot <= 7; ++slot) {
-        check(rom_backing_load_slot(slot, slots[slot - 1], sizeof(slots[0])) == 0,
-              "accept a complete raw slot binary");
-    }
-    for (int slot = 1; slot <= 7; ++slot) {
-        check_region(slot * 0x1000u, slots[slot - 1], sizeof(slots[0]));
-    }
-    check_region(0x08000, system_rom, sizeof(system_rom));
-    check(rom_backing_read(0x00FFF, NULL) == 0, "released slot remains empty");
-
-    check(rom_backing_load_slot(-1, slots[0], 4096) == -1, "reject negative slot");
-    check(rom_backing_load_slot(0, slots[0], 4096) == -1, "reject reserved slot 0");
-    check(rom_backing_load_slot(8, slots[0], 4096) == -1, "reject slot 8");
-    check(rom_backing_load_slot(7, NULL, 4096) == -1, "reject null data");
-    check(rom_backing_load_slot(7, slots[0], 4095) == -1, "reject short binary");
-    check(rom_backing_load_slot(7, slots[0], 4097) == -1, "reject long binary");
-    check(rom_backing_load_slot(7, slots[0], SIZE_MAX) == -1, "reject overflowing length");
-    check_region(0x07000, slots[6], sizeof(slots[0]));
-
-    check(rom_backing_load_slot(7, slots[0], sizeof(slots[0])) == 0,
-          "replace an installed slot");
-    check_region(0x07000, slots[0], sizeof(slots[0]));
-    check_region(0x06000, slots[5], sizeof(slots[0]));
-    check_region(0x08000, system_rom, sizeof(system_rom));
+    check(rom_backing_write_image(NULL) == -1, "reject a null output path");
+    check(rom_backing_write_image("") == -1, "reject an empty output path");
+    check(rom_backing_write_image(argv[2]) == -1, "reject a directory as an output file");
+    check(rom_backing_write_image(argv[1]) == 0, "export the compiled ROM image");
+    check_export(argv[1], expected);
+    check(rom_backing_write_image(argv[1]) == 0, "replace an image with a complete export");
+    check_export(argv[1], expected);
 
     int oob = 1;
-    check(rom_backing_read(0x10000, &oob) == 0 && !oob, "space above 64 KiB is valid");
     check(rom_backing_read(0x3FFFF, &oob) == 0 && !oob, "last byte is in range");
     rom_backing_set_trace(capture_oob);
     check(rom_backing_read_traced(0xFFFF, 0x40000, 0) == 0, "return zero above backing");
     check(traced_oob && rom_backing_oob_count() == 1, "trace and count the OOB read");
     rom_backing_set_trace(NULL);
 
-    rom_backing_init(system_rom);
-    check(rom_backing_read(0x07000, NULL) == 0, "initialisation clears previous slot loads");
+    rom_backing_init();
+    check_backing(expected);
     check(rom_backing_oob_count() == 0, "initialisation clears OOB count");
-    check_raw_file(argv[1], system_rom, slots[0]);
 
     printf("rom_backing: %d checks, %d failures\n", checks, failures);
     return failures != 0;

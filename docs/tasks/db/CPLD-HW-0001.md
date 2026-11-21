@@ -31,12 +31,16 @@ CPU reads.
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 - **2026-11-21 — ROM map reconciliation:** With the 5-bit MMU address interface, card IOSEL uses CPU A7–A0 with physical A10–A8 cleared. Verify the physical low-address selection and the ROM/card enable policy against rev 3, including `C6XX_N` and DIP32 chip capacity.
+- **2026-11-21 — Target image size:** The expected hardware contents are the exact 256 KiB startup backing exported by the emulator with `-w`. Verify the part, address wiring and programmer readback against that file.
 
 **Proposed Change**
 
 ### Mandatory DIP32 flash-image integration
 
-The hardware topology should place the DIP32 ROM on the `MEM_ADDR_OUT` / `ROM_EN_N` / CPU data read path (or explicitly document any intervening logic) and establish electrical timing. Specify programmer input capacity, address-line wiring, high-bank selection/padding, and bus contention avoidance. The emulator shall run the exact byte image that is programmed to that chip.
+Place the DIP32 ROM on the `MEM_ADDR_OUT` / `ROM_EN_N` / CPU data read
+path and document any intervening logic. Verify timing, address-line
+wiring and contention behavior. The programmer takes the exact 256 KiB
+backing exported by the emulator.
 
 **Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
@@ -53,7 +57,7 @@ The hardware topology should place the DIP32 ROM on the `MEM_ADDR_OUT` / `ROM_EN
 
 ### Single-image acceptance gate (added 2026-11-21)
 
-- [ ] A concrete DIP32 flash part, electrical address/enable mapping and full-chip raw image length are documented, with readback procedure linked to ROM-0004.
+- [ ] A concrete DIP32 part, electrical address/enable mapping and full 256 KiB programming/readback procedure are verified and linked to ROM-0004.
 
 **Commits**
 

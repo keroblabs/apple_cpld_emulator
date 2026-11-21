@@ -141,19 +141,9 @@ static void board_bus_address( rtl_access_t * state, cpld_data_t * cpld )
     }
 }
 
-int board_startup( const char *rom_path )
+void board_startup( void )
 {
-    if( rom_path )
-    {
-        if( memory_controller_init_raw( rom_path ) != 0 )
-        {
-            return -1;
-        }
-    }
-    else
-    {
-        memory_controller_init();
-    }
+    memory_controller_init();
 
     rtl_model_reset();
     memset( &cpld_model, 0x00, sizeof( cpld_model ) );
@@ -186,8 +176,6 @@ int board_startup( const char *rom_path )
     cpld_model.IOU.spi_slave_state = SPI_SLAVE_STATE_IDLE;
 
     cpld_model.MMU.C0XX_N = TRUE;
-
-    return 0;
 }
 
 void board_reset( void )

@@ -1,62 +1,92 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "rom_backing.h"
-#include <stdbool.h>
+#include "apple2rom.h"
+#include "slot_roms.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+
+_Static_assert( sizeof( apple_rom_bin ) == ROM_SYSTEM_SIZE, "Unexpected Apple ROM size" );
+_Static_assert( sizeof( slot1_rom_bin ) == ROM_SLOT_SIZE, "slot1_rom_bin must contain 4096 bytes" );
+_Static_assert( sizeof( slot2_rom_bin ) == ROM_SLOT_SIZE, "slot2_rom_bin must contain 4096 bytes" );
+_Static_assert( sizeof( slot4_rom_bin ) == ROM_SLOT_SIZE, "slot4_rom_bin must contain 4096 bytes" );
+_Static_assert( sizeof( slot5_rom_bin ) == ROM_SLOT_SIZE, "slot5_rom_bin must contain 4096 bytes" );
+_Static_assert( sizeof( slot6_rom_bin ) == ROM_SLOT_SIZE, "slot6_rom_bin must contain 4096 bytes" );
+_Static_assert( sizeof( slot7_rom_bin ) == ROM_SLOT_SIZE, "slot7_rom_bin must contain 4096 bytes" );
+
+// Slot 0 is the released selector. Slot 3 uses the internal Apple ROM.
+static const uint8_t *const slot_roms[8] = {
+    [1] = slot1_rom_bin,
+    [2] = slot2_rom_bin,
+    [4] = slot4_rom_bin,
+    [5] = slot5_rom_bin,
+    [6] = slot6_rom_bin,
+    [7] = slot7_rom_bin,
+};
 
 static uint8_t rom_space[ ROM_BACKING_SIZE ];
 static rom_backing_trace_fn rom_trace;
 static uint32_t rom_oob_reads;
-static bool raw_file_loaded;
 
-void rom_backing_init( const uint8_t system_rom[ ROM_SYSTEM_SIZE ] )
+void rom_backing_init( void )
 {
     memset( rom_space, 0, sizeof( rom_space ) );
-    memcpy( &rom_space[ ROM_SYSTEM_BASE ], system_rom, ROM_SYSTEM_SIZE );
+    memcpy( &rom_space[ ROM_SYSTEM_BASE ], apple_rom_bin, sizeof( apple_rom_bin ) );
+    for( size_t slot = 0; slot < sizeof( slot_roms ) / sizeof( slot_roms[0] ); ++slot )
+    {
+        if( slot_roms[slot] )
+        {
+            memcpy( &rom_space[ slot * ROM_SLOT_SIZE ], slot_roms[slot], ROM_SLOT_SIZE );
+        }
+    }
     rom_oob_reads = 0;
-    raw_file_loaded = false;
 }
 
-int rom_backing_load_raw_file( const char *path )
+int rom_backing_write_image( const char *path )
 {
-    if( path == NULL )
+    if( path == NULL || path[0] == '\0' )
     {
         return -1;
     }
 
-    FILE *file = fopen( path, "rb" );
-    if( file == NULL )
+    // Publish the new image only after all bytes have been written and closed.
+    const size_t temp_size = strlen( path ) + sizeof( ".tmp.XXXXXX" );
+    char *temp_path = malloc( temp_size );
+    if( temp_path == NULL )
     {
         return -1;
     }
+    snprintf( temp_path, temp_size, "%s.tmp.XXXXXX", path );
 
-    // Stage the bytes until the complete file has been read and checked.
-    uint8_t *image = malloc( sizeof( rom_space ) );
-    const bool complete = image &&
-                          fread( image, 1, sizeof( rom_space ), file ) == sizeof( rom_space ) &&
-                          fgetc( file ) == EOF && !ferror( file );
-    fclose( file );
-
-    if( complete )
+    const int fd = mkstemp( temp_path );
+    if( fd == -1 )
     {
-        memcpy( rom_space, image, sizeof( rom_space ) );
-        rom_oob_reads = 0;
-        raw_file_loaded = true;
-    }
-
-    free( image );
-    return complete ? 0 : -1;
-}
-
-int rom_backing_load_slot( int slot, const uint8_t *image, size_t image_len )
-{
-    if( raw_file_loaded || slot < 1 || slot > 7 || image == NULL || image_len != ROM_SLOT_SIZE )
-    {
+        free( temp_path );
         return -1;
     }
 
-    memcpy( &rom_space[ (size_t)slot * ROM_SLOT_SIZE ], image, ROM_SLOT_SIZE );
-    return 0;
+    int result = -1;
+    FILE *file = fdopen( fd, "wb" );
+    if( file )
+    {
+        const size_t written = fwrite( rom_space, 1, sizeof( rom_space ), file );
+        if( fclose( file ) == 0 && written == sizeof( rom_space ) )
+        {
+            result = rename( temp_path, path );
+        }
+    }
+    else
+    {
+        close( fd );
+    }
+    if( result != 0 )
+    {
+        unlink( temp_path );
+    }
+    free( temp_path );
+    return result;
 }
 
 uint8_t rom_backing_read( uint32_t phys_addr, int *out_of_bounds )

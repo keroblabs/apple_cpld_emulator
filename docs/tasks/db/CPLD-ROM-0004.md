@@ -1,14 +1,14 @@
 # CPLD-ROM-0004 — Produce and emulate one programmer-ready DIP32 flash image
 
 **ID:** `CPLD-ROM-0004`  
-**Status:** `IN_PROGRESS`\
+**Status:** `REVIEW`\
 **Title:** Produce and emulate one programmer-ready DIP32 flash image
 
 **Description**
 
-The DIP32 hardware ROM takes one contiguous headerless image. Build that file
-deterministically, verify it by booting the emulator directly from its bytes,
-and compare full-chip programmer readback with the tested file.
+The DIP32 hardware ROM takes one contiguous, headerless 256 KiB image. The
+emulator builds it in memory from the compiled ROM arrays, optionally exports
+those bytes during startup and runs from the same backing.
 
 **Details**
 
@@ -23,25 +23,25 @@ and compare full-chip programmer readback with the tested file.
 ### Fixed logical ROM address map
 
 The current MMU uses the lowest 64 KiB of the 256 KiB emulator ROM
-backing. File offsets follow the physical byte addresses from ROM map rev 3.
+backing. File offsets follow the physical byte addresses from ROM map rev 4.
 
-- `0x0000–0x7FFF`: eight 4 KiB slot-index regions (slot 0 reserved; slots 1–7).
+- `0x0000–0x7FFF`: eight 4 KiB slot-index regions. Slots 0 and 3 are zero-filled. Slots 1, 2, 4, 5, 6 and 7 use the compiled arrays.
 - Slot `N` entry ROM: `N << 12`, the first 256 bytes of its window (IOSEL).
 - Slot `N` expansion ROM: `(N<<12)|0x800`, 2048 bytes in second 2 KiB (IOSTB).
 - Slot 6 card entry, when supplied, starts at `0x06000`. Slot 7 entry starts at `0x07000` and expansion at `0x07800`.
 - `0x08000–0x0FFFF`: unmodified Apple image, including the original internal `$C600–$C6FF` and system `$D000–$FFFF` offsets.
-- `0x10000–0x3FFFF`: reserved emulator capacity. Define high-address contents for the confirmed device.
+- `0x10000–0x3FFFF`: zero-filled high target addresses.
 
-**Important:** DIP32 specifies the package only. Confirm part number, actual capacity/address lines, CE/OE/WE and programmer full-chip image size in `CPLD-HW-0001`; the 64 KiB decoded layout is not proof of a 64 KiB flash chip. A larger device still receives **one** deterministic full-chip image when required.
+In CPLD-HW-0001 confirm the part number, address lines, CE/OE/WE and full
+programmer readback of the expected 256 KiB target image.
 
 ### Deliverables and constraints
 
-1. A documented deterministic build/packing tool for one **headerless** physical programmer binary (suggested `apple_cpld_flash.bin`), with independent map/manifest/hash as optional sidecars. Never program `CPRM`/descriptor metadata at raw ROM offset 0.
-2. Compose the image from the original Apple bytes and one raw 4096-byte input for each populated slot. Record the fill rule and device-size or high-bank policy separately.
-3. Start the emulator with the exact raw programmer file as its sole ROM content. Normal `MEM_ADDR_OUT`, `ROM_EN_N` and slot strobes drive the emulator fetches. The direct startup loader is tracked in CPLD-ROM-0003.
-4. Regression tests comparing raw file bytes with both direct physical ROM reads and real MMU→memory bus CPU-visible fetches; verify slot boundaries, slot 6 legacy ROM, slot 7 firmware, per-slot C800 expansion, CFFF semantics and system ROM vectors. Avoid treating an independent copy of the RTL formula as a full integration test.
-5. Rebuild deterministically twice, verify identical SHA-256; boot the emulator with the raw image and verify `PR#3`/`PR#0`, floppy paths and (when available) slot7 ProDOS/IOMEM. The owner has already confirmed `PR#3`/`PR#0` for the older reconstructed ROM; **repeat that test in raw mode**.
-6. Document hardware programming/readback procedure and verify complete byte-for-byte readback against the very file tested in the emulator. If the chip is unavailable, mark this subtest **PENDING HARDWARE VERIFICATION**, not complete.
+1. Compile `apple_rom_bin[]` and the six 4096-byte slot arrays. Document the source revision, populated slots and their `SLOTn_ROM` definitions.
+2. Start the emulator with `-w IMAGEFILE` to write exactly 262144 bytes from the populated backing. Startup without arguments creates no file.
+3. Compare the exported bytes with the compiled inputs, whole backing and real MMU-driven reads. Probe the empty slots, IOSEL/IOSTB, CFFF, Apple internal ROM and system vectors.
+4. Compare independent builds and SHA-256. Verify `PR#3`/`PR#0` and the floppy bootstrap during a run that writes the image. Repeat with the populated release build including slot-7 ProDOS/IOMEM when available.
+5. Program the exported file and compare the full programmer readback byte for byte. Record the part, wiring, programmer settings and tested image digest.
 
 **Notes**
 
@@ -51,22 +51,23 @@ backing. File offsets follow the physical byte addresses from ROM map rev 3.
 - **2026-11-21 — Merge decision:** Retained the one-image release and chip readback gates from `22285ea`. The approved raw slot binaries from `174966e` use offset zero for IOSEL, so the earlier `0x6600` and `0x7700` entry offsets are superseded. Apple internal Cx bytes keep their original offsets. The part number, lower IOSEL address wiring, device size/fill policy, reproducible release composition and tests on the actual file remain open.
 - **2026-11-21 — Emulator prerequisite:** CPLD-ROM-0003 added `--rom IMAGE.bin` and verified byte parity, `PR#3`/`PR#0` and the Disk II bootstrap with 256 KiB fixtures. Repeat these checks with the reproducibly composed programmer file after the part and its file length are confirmed.
 - **2026-11-21 — Owner directive and status change:** `OPEN → IN_PROGRESS` to replace the separate composition and raw-file boot workflow. The emulator assembles the 256 KiB target image from compiled inputs and emits the exact backing via `-w IMAGEFILE` after loading all arrays. The previous CLI rejected `-w` and created no image. Verify byte parity, optional output and boot against the new entry point.
+- **2026-11-21 — Export verification:** The default debug and independent release builds exported identical 262144-byte files with SHA-256 `4f598d9a529f1a65fa83e8674b0c41c9950d60c1843839da788fd96ce0ffe7f0`. The Disk II fixture build with `SLOT6_ROM` exported 262144 bytes with SHA-256 `a73675446e4eebf0d9f1eb4c29881e16e416a7dc56755847c08ed0712cdb14f0`. Both matched the documented layout byte for byte. A no-argument run created no file. The CLI rejected the former input option and incomplete `-w` requests. An export under a 1024-byte file size limit preserved the existing destination and removed its temporary output.
+- **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` for the target image exporter. The populated release, DIP32 wiring and hardware readback gates are still open.
 
 **Proposed Change**
 
-Implement the deterministic release composer against the addresses in the ROM
-map and use the raw startup path from CPLD-ROM-0003. Confirm the part before
-locking the device file size, high address-line policy and fill.
+Use the emulator's `-w` export of its compiled startup image as the target
+programmer file. Verify the device capacity, high-line wiring and readback.
 [DIP32 flash-image contract](../../rom-flash-image-contract.md)
 
 ### Acceptance criteria
 
-- [ ] One single headerless, deterministic programmer-ready raw ROM image exists and every logical ROM address is explicit, with no hidden remapping or overlays.
-- [ ] Full device capacity and high-bank/padding policy match a specified, verified DIP32 part; output is exactly usable by the selected programmer.
-- [ ] Emulator accepts the exact binary as its **sole ROM content** and produces byte-for-byte identical reads at all physical addresses in the current mapping.
-- [ ] End-to-end MMU/ROM fetch test, boot and `PR#3`/`PR#0` regression use the final binary in raw-flash mode.
-- [ ] Raw image digest, input manifest, output length, source commit and test results are recorded; rebuilding yields identical binary.
-- [ ] Programming and complete-chip readback match the same file byte-for-byte. If chip/programmer is not yet available, this item remains PENDING HARDWARE VERIFICATION.
+- [x] `-w IMAGEFILE` writes the single headerless 256 KiB backing, and a no-argument run creates no file.
+- [x] Default and overridden builds export the expected bytes. The MMU fetch tests and desktop boot probes use the backing emitted in their run.
+- [x] The default image reproduces across separate builds. Fixture lengths, hashes and test results are recorded.
+- [ ] The DIP32 part, address wiring and programmer are confirmed for the exact 256 KiB file.
+- [ ] The populated release build passes its slot-7 ProDOS and IOMEM acceptance tests. [CPLD-TEST-0001](CPLD-TEST-0001.md)
+- [ ] Programming and complete chip readback match the exported file byte for byte.
 
 **Commits**
 
@@ -74,9 +75,11 @@ locking the device file size, high address-line policy and fill.
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Owner release requirements and the DIP32 hardware acceptance gate |
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Adopt the rev 3 physical byte offsets and keep final chip validation open |
-| `mmu-rom-analysis` | `5184c00` | `UNREVIEWED` | Emulator prerequisite for direct raw-file tests with the programmer image |
+| `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Emulator prerequisite for direct raw-file tests with the programmer image |
+| `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record direct export of the compiled startup image |
 
 **Resolution Description**
 
-Pending release composition, confirmed chip parameters, emulator validation of
-the final file and complete programmer readback.
+The emulator generates the expected target image and the current compiled
+fixtures pass byte-parity and boot tests. Populated release testing and
+physical programming/readback remain open.

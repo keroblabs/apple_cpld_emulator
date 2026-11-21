@@ -28,12 +28,15 @@ Exercise the whole path with real ROM fetch and Apple 65816 execution: ROM_EN_N/
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
+- **2026-11-21 — Compiled-image verification:** The emulator runs with the compiled Apple and slot arrays and writes its exact 256 KiB image via `-w`. Verify the runtime backing against the emitted file and use that file for later hardware readback comparison.
 
 **Proposed Change**
 
 ### Mandatory DIP32 flash-image integration
 
-The test harness boots the emulator using the programmer-ready binary as the ROM backing, verifies expected slot6 and slot7 bytes, runs ProDOS block reads, and records the binary's SHA-256; later hardware readback must match that same file.
+Boot the emulator with the release slot arrays and `-w IMAGEFILE`. Verify
+slot-6 and slot-7 bytes against the export, run ProDOS block reads, and
+record the SHA-256 for later hardware readback comparison.
 
 **Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
@@ -51,7 +54,7 @@ The test harness boots the emulator using the programmer-ready binary as the ROM
 
 ### Single-image acceptance gate (added 2026-11-21)
 
-- [ ] Successful ProDOS slot7 boot and IOMEM 512-byte transfer are observed with emulator raw-image mode using the same byte image intended for physical programming.
+- [ ] Observe slot-7 ProDOS boot and an exact IOMEM 512-byte transfer in the emulator run that writes the corresponding programmer image via `-w`.
 
 **Commits**
 

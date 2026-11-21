@@ -1,6 +1,5 @@
 #include "memory_controller.h"
 #include "rtl_model.h"
-#include "apple2rom.h"
 #include "ram_bus_hw.h"
 #include "disc_drive.h"
 #include "rom_backing.h"
@@ -13,8 +12,6 @@
 //////////////////////////////////////////////////////////////////////////////////////
 
 static uint8_t ram_memory[ RAM_MEMORY_SIZE ];
-
-_Static_assert( sizeof( apple_rom_bin ) == ROM_SYSTEM_SIZE, "Unexpected Apple ROM size" );
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -84,31 +81,11 @@ static void board_write_bus( cpld_data_t * cpld, uint32_t cpu_address, uint8_t d
     }
 }
 
-static void memory_controller_init_devices( void )
-{
-    memset( ram_memory, 0xA0, RAM_MEMORY_SIZE );
-    disc_drive_init();
-}
-
 void memory_controller_init( void )
 {
-    rom_backing_init( apple_rom_bin );
-    memory_controller_init_devices();
-}
-
-int memory_controller_init_raw( const char *path )
-{
-    if( rom_backing_load_raw_file( path ) != 0 )
-    {
-        return -1;
-    }
-    memory_controller_init_devices();
-    return 0;
-}
-
-int memory_controller_load_slot_rom( int slot, const uint8_t *image, size_t image_len )
-{
-    return rom_backing_load_slot( slot, image, image_len );
+    rom_backing_init();
+    memset( ram_memory, 0xA0, RAM_MEMORY_SIZE );
+    disc_drive_init();
 }
 
 uint8_t memory_controller_access( void * p_cpld, uint32_t cpu_address, bool_t is_read, uint8_t data_in )

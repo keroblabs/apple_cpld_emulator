@@ -30,14 +30,16 @@ Create an Apple 6502/65C816-compatible slot7 firmware skeleton with the ProDOS b
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
 - **2026-11-21 — ROM map reconciliation:** Rev 3 places slot 7 IOSEL at `0x07000–0x070FF` and IOSTB at `0x07800–0x07FFF`. The active slot firmware build emits one raw 4096-byte file, with IOSEL at file offset `0x000` and expansion at `0x800`. This supersedes the earlier `0x7700` entry offset.
+- **2026-11-21 — Compiled slot input:** Integrate the 4096-byte result as `slot7_rom_bin[]` with `SLOT7_ROM` defined. The emulator's `-w` export is the programmer image for that same build.
 
 **Proposed Change**
 
 ### Mandatory DIP32 flash-image integration
 
-Build the 256-byte IOSEL entry and the slot-7 IOSTB expansion into a single
-raw 4096-byte slot input for ROM-0004. Verify its bytes and ProDOS signature
-with the emulator loading the complete programmer image directly.
+Build the 256-byte IOSEL entry and the slot-7 IOSTB expansion into the
+4096-byte `slot7_rom_bin[]` input and define `SLOT7_ROM`. Verify its bytes,
+ProDOS signature and execution with the build that exports the programmer
+image via `-w`.
 
 **Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
@@ -54,7 +56,7 @@ with the emulator loading the complete programmer image directly.
 
 ### Single-image acceptance gate (added 2026-11-21)
 
-- [ ] The produced firmware entry and expansion bytes are placed at their physical offsets in the one final DIP32 ROM image and can be executed by the emulator loading that unchanged raw image.
+- [ ] The emulator executes the compiled slot-7 ROM and exports its exact entry and expansion bytes at the physical offsets in the final DIP32 image.
 
 **Commits**
 

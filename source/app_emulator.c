@@ -35,14 +35,14 @@ static void video_thread_handler( void )
 
 int main( int argc, char **argv )
 {
-    const char *rom_path = NULL;
-    if( argc == 3 && strcmp( argv[1], "--rom" ) == 0 )
+    const char *rom_output_path = NULL;
+    if( argc == 3 && strcmp( argv[1], "-w" ) == 0 && argv[2][0] != '\0' )
     {
-        rom_path = argv[2];
+        rom_output_path = argv[2];
     }
     else if( argc != 1 )
     {
-        fprintf( stderr, "Usage: %s [--rom IMAGE.bin]\n", argv[0] );
+        fprintf( stderr, "Usage: %s [-w IMAGEFILE]\n", argv[0] );
         return EXIT_FAILURE;
     }
 
@@ -57,17 +57,17 @@ int main( int argc, char **argv )
 
     // initialize board
     input_drv_init();
-    if( board_startup( rom_path ) != 0 )
+    board_startup();
+    if( rom_output_path )
     {
-        fprintf( stderr, "Cannot load raw ROM '%s'. Expected a readable %u-byte file.\n",
-                 rom_path, ROM_BACKING_SIZE );
-        lcd_driver_deinit();
-        heap_mngr_deinit();
-        return EXIT_FAILURE;
-    }
-    if( rom_path )
-    {
-        printf( "Loaded raw ROM '%s' (%u bytes)\n", rom_path, ROM_BACKING_SIZE );
+        if( rom_backing_write_image( rom_output_path ) != 0 )
+        {
+            fprintf( stderr, "Cannot write ROM image '%s'.\n", rom_output_path );
+            lcd_driver_deinit();
+            heap_mngr_deinit();
+            return EXIT_FAILURE;
+        }
+        printf( "Wrote ROM image '%s' (%u bytes)\n", rom_output_path, ROM_BACKING_SIZE );
     }
     keyboard_controller_init();
 

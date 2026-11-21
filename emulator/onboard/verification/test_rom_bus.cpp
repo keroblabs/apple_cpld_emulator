@@ -82,53 +82,42 @@ static void expect_apple_rom(cpld_data_t &cpld, uint16_t cpu)
     expect_rom(cpld, cpu, cpu, apple_rom_bin[cpu - 0x8000], 0);
 }
 
-static void verify_raw_image(cpld_data_t &cpld, const char *path)
+static constexpr unsigned compiled_slots[] = {1, 2, 4, 5, 6, 7};
+
+static bool read_export(const char *path, uint8_t *bytes)
 {
-    static uint8_t bytes[ROM_BACKING_SIZE];
-    for (size_t i = 0; i < sizeof(bytes); ++i) {
-        bytes[i] = (uint8_t)(0xA5 ^ i ^ (i >> 8) ^ (i >> 16));
+    const bool written = rom_backing_write_image(path) == 0;
+    check(written, "export the ROM from the initialized board controller");
+    if (!written) {
+        return false;
     }
 
-    std::ofstream output(path, std::ios::binary);
-    output.write(reinterpret_cast<const char *>(bytes), sizeof(bytes));
-    output.close();
-    const bool loaded = output && memory_controller_init_raw(path) == 0;
-    check(loaded, "initialize the memory controller directly from the raw image file");
-    if (!loaded) {
-        return;
+    std::ifstream input(path, std::ios::binary);
+    input.read(reinterpret_cast<char *>(bytes), ROM_BACKING_SIZE);
+    const bool complete = input && input.peek() == EOF && !input.bad();
+    check(complete, "export contains exactly 262144 bytes");
+    if (!complete) {
+        return false;
     }
 
-    rtl_model_reset();
-    cpld = {};
-    rtl_model_state_reset(&cpld);
-    check(memory_controller_load_slot_rom(6, bytes, ROM_SLOT_SIZE) == -1,
-          "memory controller rejects overlays on the raw file");
-
-    access(cpld, 0xC00B, false); // Use the external slot 3 bytes for the full slot sweep.
-    for (unsigned slot = 1; slot <= 7; ++slot) {
-        const uint16_t cpu_entry = 0xC000 + slot * 0x100;
-        const uint32_t base = slot * 0x1000;
-        for (uint16_t offset = 0; offset < 0x100; ++offset) {
-            expect_rom(cpld, cpu_entry + offset, base + offset, bytes[base + offset], 1);
+    // Check the whole file, including the IOSEL padding and unused regions.
+    static uint8_t expected[0x40000];
+    memcpy(expected + 0x8000, apple_rom_bin, sizeof(apple_rom_bin));
+    const unsigned offsets[] = {0x000, 0x0FF, 0x100, 0x7FF, 0x800, 0xFFE, 0xFFF};
+    for (unsigned slot : compiled_slots) {
+        for (unsigned i = 0; i < sizeof(offsets) / sizeof(offsets[0]); ++i) {
+            expected[slot * 0x1000 + offsets[i]] = 0x10 * (i + 1) + slot;
         }
-        for (uint16_t offset = 0; offset < 0x800; ++offset) {
-            const uint32_t phys = base + 0x800 + offset;
-            expect_rom(cpld, 0xC800 + offset, phys, bytes[phys], 1);
-        }
-        expect_rom(cpld, 0xC800, 0x00800, bytes[0x00800], 1);
     }
-
-    access(cpld, 0xC007, false); // Select the internal Cx ROM.
-    for (unsigned cpu = 0xC100; cpu <= 0xFFFF; ++cpu) {
-        expect_rom(cpld, cpu, cpu, bytes[cpu], 0);
-    }
-    check(rom_backing_oob_count() == 0, "all raw-image CPU reads are in bounds");
+    check(memcmp(bytes, expected, sizeof(expected)) == 0,
+          "file matches all compiled sources and zero-filled regions at their physical offsets");
+    return true;
 }
 
 int main(int argc, char **argv)
 {
     if (argc != 2) {
-        fprintf(stderr, "Expected a temporary raw ROM output path\n");
+        fprintf(stderr, "Expected a temporary ROM export path\n");
         return 1;
     }
 
@@ -139,39 +128,43 @@ int main(int argc, char **argv)
     memory_controller_init();
     rom_backing_set_trace(trace_rom);
 
-    // Empty slots and the reserved expansion window read as an empty bus.
-    expect_rom(cpld, 0xC700, 0x07000, 0, 1);
-    expect_rom(cpld, 0xC800, 0x07800, 0, 1);
-    expect_rom(cpld, 0xCFFF, 0x07FFF, 0, 1);
+    static uint8_t bytes[ROM_BACKING_SIZE];
+    if (!read_export(argv[1], bytes)) {
+        return 1;
+    }
+    expect_rom(cpld, 0xC800, 0x00800, 0, 1); // No expansion owner at reset.
+
+    // Internal slot-3 ROM remains available from the Apple image.
+    expect_apple_rom(cpld, 0xC300);
+    expect_apple_rom(cpld, 0xC800);
+    expect_apple_rom(cpld, 0xCFFF);
     expect_rom(cpld, 0xC800, 0x00800, 0, 1);
-    expect_rom(cpld, 0xC6FF, 0x060FF, 0, 1);
+    access(cpld, 0xC00B, false);
+    expect_rom(cpld, 0xC300, 0x03000, 0, 1);
+    expect_rom(cpld, 0xC3FF, 0x030FF, 0, 1);
+    expect_rom(cpld, 0xC800, 0x03800, 0, 1);
+    expect_rom(cpld, 0xCFFF, 0x03FFF, 0, 1);
+    expect_rom(cpld, 0xC800, 0x00800, 0, 1);
+
+    // Probe every reachable byte of the six compiled slot fixtures.
+    for (unsigned slot : compiled_slots) {
+        const uint16_t cpu_entry = 0xC000 + slot * 0x100;
+        const uint32_t base = slot * 0x1000;
+        for (uint16_t offset = 0; offset < 0x100; ++offset) {
+            expect_rom(cpld, cpu_entry + offset, base + offset, bytes[base + offset], 1);
+        }
+        for (uint16_t offset = 0; offset < 0x800; ++offset) {
+            const uint32_t phys = base + 0x800 + offset;
+            expect_rom(cpld, 0xC800 + offset, phys, bytes[phys], 1);
+        }
+        expect_rom(cpld, 0xC800, 0x00800, 0, 1);
+    }
+
+    expect_rom(cpld, 0xC6FF, 0x060FF, bytes[0x060FF], 1);
     check(!cpld.IOU.iosel_6_n && cpld.MMU.IOSEL_N, "slot 6 uses the dedicated decode");
-
-    uint8_t slot6[4096], slot7[4096];
-    for (size_t i = 0; i < sizeof(slot7); ++i) {
-        slot6[i] = (uint8_t)(0x61 + (i ^ (i >> 8)));
-        slot7[i] = (uint8_t)(0x71 + (i ^ (i >> 8)));
-    }
-    check(memory_controller_load_slot_rom(6, slot6, sizeof(slot6)) == 0, "load raw slot 6");
-    check(memory_controller_load_slot_rom(7, slot7, sizeof(slot7)) == 0, "load raw slot 7");
-    check(memory_controller_load_slot_rom(7, slot6, sizeof(slot6) - 1) < 0,
-          "reject a short binary through the board API");
-
-    // Dump the two complete Apple-facing slot-7 windows through the sampled bus.
-    for (uint16_t i = 0; i < 0x100; ++i) {
-        expect_rom(cpld, 0xC700 + i, 0x07000 + i, slot7[i], 1);
-    }
-    for (uint16_t i = 0; i < 0x800; ++i) {
-        expect_rom(cpld, 0xC800 + i, 0x07800 + i, slot7[0x800 + i], 1);
-    }
-    expect_rom(cpld, 0xC800, 0x00800, 0, 1);
-
-    expect_rom(cpld, 0xC600, 0x06000, slot6[0x000], 1);
-    expect_rom(cpld, 0xC6FF, 0x060FF, slot6[0x0FF], 1);
-    expect_rom(cpld, 0xC800, 0x06800, slot6[0x800], 1);
-    expect_rom(cpld, 0xCFFE, 0x06FFE, slot6[0xFFE], 1);
-    expect_rom(cpld, 0xC700, 0x07000, slot7[0x000], 1);
-    expect_rom(cpld, 0xC800, 0x07800, slot7[0x800], 1);
+    expect_rom(cpld, 0xC800, 0x06800, bytes[0x06800], 1);
+    expect_rom(cpld, 0xC700, 0x07000, bytes[0x07000], 1);
+    expect_rom(cpld, 0xC800, 0x07800, bytes[0x07800], 1);
     const unsigned before_write = traces;
     access(cpld, 0xCFFF, false, 0xFF);
     check(traces == before_write, "CFFF write releases without a ROM read");
@@ -179,22 +172,14 @@ int main(int argc, char **argv)
     check(access(cpld, 0xC0EC) == 0x6E && floppy_reads == 1 && !cpld.IOU.devsel_6_n,
           "slot-6 I/O still reaches the floppy controller");
 
-    // Internal slot-3 ROM is enabled by default. C00B enables external slot 3.
-    expect_apple_rom(cpld, 0xC300);
-    expect_apple_rom(cpld, 0xC800);
-    expect_apple_rom(cpld, 0xCFFF);
-    expect_rom(cpld, 0xC800, 0x00800, 0, 1);
-    access(cpld, 0xC00B, false);
-    expect_rom(cpld, 0xC300, 0x03000, 0, 1);
-
-    // INTCXROM selects the original Apple Cx bytes even with card ROMs installed.
+    // Check the Apple runtime ROM bytes against the same exported file.
     access(cpld, 0xC007, false);
     for (unsigned cpu = 0xC100; cpu <= 0xFFFF; ++cpu) {
-        expect_apple_rom(cpld, cpu);
+        expect_rom(cpld, cpu, cpu, bytes[cpu], 0);
     }
     expect_apple_rom(cpld, 0xC800);
     access(cpld, 0xC006, false);
-    expect_rom(cpld, 0xC7FF, 0x070FF, slot7[0x0FF], 1);
+    expect_rom(cpld, 0xC7FF, 0x070FF, bytes[0x070FF], 1);
     expect_apple_rom(cpld, 0xFFFC);
     expect_apple_rom(cpld, 0xFFFD);
 
@@ -212,8 +197,6 @@ int main(int argc, char **argv)
     check(memory_controller_access(&cpld, 0xD123, true, 0) == 0 &&
           last_trace.out_of_bounds && rom_backing_oob_count() == 1,
           "memory controller exposes an out-of-bounds ROM read");
-
-    verify_raw_image(cpld, argv[1]);
 
     printf("ROM bus: %u checks, %u failures\n", checks, failures);
     return failures != 0;

@@ -18,11 +18,18 @@ headers=("-I$onboard" "-I$cpld" "-I$repo_dir/system"
 
 "$CC" -std=c11 -Wall -Wextra -Werror -O2 -I"$onboard" \
     "$tests_dir/test_rom_backing.c" "$onboard/rom_backing.c" -o "$build_dir/test_rom_backing"
-"$build_dir/test_rom_backing" "$build_dir/backing.bin"
+mkdir "$build_dir/blocked"
+"$build_dir/test_rom_backing" "$build_dir/backing.bin" "$build_dir/blocked"
+test -d "$build_dir/blocked"
+if compgen -G "$build_dir/*.tmp.*" > /dev/null; then
+    echo "FAIL: export left a temporary file" >&2
+    exit 1
+fi
 
 "$CC" -std=c11 -Wall -Wextra -Werror -O2 "${headers[@]}" \
     -c "$onboard/memory_controller.c" -o "$build_dir/memory_controller.o"
 "$CC" -std=c11 -Wall -Wextra -Werror -O2 -I"$onboard" \
+    -include "$tests_dir/slot_rom_fixtures.h" \
     -c "$onboard/rom_backing.c" -o "$build_dir/rom_backing.o"
 
 run_bus_test() {
