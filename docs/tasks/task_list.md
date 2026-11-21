@@ -38,6 +38,12 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | --- | --- | --- | --- | --- | --- |
 | `CPLD-BLD-0001` | TASK | REVIEW | Remote ATF1508ASV build driver for MMU and IOU | M1/M3 — RTL build infrastructure | [Details](db/CPLD-BLD-0001.md) |
 
+## CPLD-DOC — Documentation and engineering methodology
+
+| ID | Kind | Status | Title | Milestone | Ticket |
+| --- | --- | --- | --- | --- | --- |
+| `CPLD-DOC-0001` | IMPROVEMENT | REVIEW | Add stakeholder attribution and current-work summary to tickets | Engineering workflow | [Details](db/CPLD-DOC-0001.md) |
+
 ## CPLD-FW — Apple slot 7 ProDOS firmware
 
 | ID | Kind | Status | Title | Milestone | Ticket |
