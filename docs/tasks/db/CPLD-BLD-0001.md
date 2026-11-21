@@ -36,7 +36,8 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 - [x] Test harness confirms separate MMU/IOU top-level source transfer and no historical EDIF/JED or testbench transfer; **real design builds pending**.
 - [x] Mock fitter asserts `-d ATF1508ASV -p PLCC84 -s 15` for each target; real fitter report still pending.
 - [x] Mock tests verify unique output directories, nonzero propagation and preserved logs for Yosys and fitter errors.
-- [ ] User runs each real build on `devel` against `devel-rtl`; actual fit, timing, pins, warnings and security/JTAG settings are reviewed under `CPLD-HW-0004`.
+- [x] Owner ran both physical builds on `devel` against `devel-rtl`, reporting successful ATF1508ASV PLCC84 fit and JTAG/security settings.
+- [ ] Detailed fit files, timing/clock constraints, pin assignments, warnings and exact build variants reviewed under `CPLD-HW-0004`.
 - [ ] Owner reviews the implementation before marking RESOLVED. The `rtl-compile-work` branch is updated for the owner-requested `git pull`; no merge is performed.
 
 **Implementation and verification log**
@@ -49,6 +50,8 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 - **2026-11-21 — Root cause and fix:** `rtl_MMU/MMU_io.v` depends on `TTL_ls138_2`, `TTL_ls259`, `IOU_exp16`, and optionally `IOU_toggle_d`, which are stored in `rtl_IOU/`. Updated the build-driver source manifest to include those four named helpers during MMU compilation only. Physical IOU top and SPI implementation remain excluded. No RTL changes.
 - **2026-11-21 — Regression and reproducibility:** `bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build.sh` passed and `bash tests/test_remote_build.sh` passed 10/10 mock groups in the isolated build workspace, including missing-dependency rejection and `SPK_IN_MMU` coverage. The tests were not executed on `devel` after the change; real MMU and IOU Yosys/fitter runs remain pending.
 - **2026-11-21 — Branch publication requested by owner:** Instead of applying local patch files, the owner explicitly requested committing the correction directly to `rtl-compile-work` to retrieve it by `git pull`. Code/test/docs commit `4a5c4ca` made from branch head `a7d7203`; this ticket-only commit records the handoff. No PR or merge.
+- **2026-11-21 — Real devel→devel-rtl fitting (owner report):** After pulling the cross-directory MMU source fix, the owner supplied complete FIT utilisation summaries for both independently fitted physical tops. IOU: 108/128 macrocells, 83/128 flip-flops, 36/64 user I/O, 14 foldbacks, 112/128 nodes+FB/MCs, 10 cascades, 365 product terms; MMU: 42/128 macrocells, 17/128 flip-flops, 39/64 user I/O, 3 foldbacks, 42/128 nodes+FB/MCs, 3 cascades, 133 product terms. Both summaries report `$Device PLCC84 fits; JTAG ON; Secure OFF`. This is owner-executed build evidence, *not* an independently executed test here. Build run directories, define variants, detailed timing and pin files were not provided; the hardware feasibility review remains with [CPLD-HW-0004](CPLD-HW-0004.md).
+
 
 **Commits**
 
@@ -60,4 +63,4 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 
 **Resolution Description**
 
-Pending owner review and real MMU/IOU fitter acceptance.
+Real independent MMU/IOU fit reported successful by owner; pending owner review of this build automation and detailed fitter/timing acceptance under `CPLD-HW-0004`.
