@@ -26,7 +26,9 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
-| `CPLD-HW-0001` | TASK | OPEN | Freeze STM32 SPI ownership and CPU ROM-read architecture | M1 — ROM mapping | [Details](db/CPLD-HW-0001.md) |
+| `CPLD-HW-0001` | TASK | RESOLVED | Freeze STM32 ownership and 128 KiB PLCC flash architecture | M1 — ROM mapping | [Details](db/CPLD-HW-0001.md) |
+| `CPLD-HW-0002` | TASK | OPEN | Add independent SRAM and parallel-flash RD/WR strobes to RTL and emulator | M1 — ROM mapping | [Details](db/CPLD-HW-0002.md) |
+| `CPLD-HW-0003` | TASK | OPEN | Review and optimise IOU SPI-slave serialization and clocking | M3 — IOMEM disk service | [Details](db/CPLD-HW-0003.md) |
 
 ## CPLD-FW — Apple slot 7 ProDOS firmware
 
