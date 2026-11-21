@@ -73,6 +73,7 @@ locking the device file size, high address-line policy and fill.
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Owner release requirements and the DIP32 hardware acceptance gate |
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Adopt the rev 3 physical byte offsets and keep final chip validation open |
+| `mmu-rom-analysis` | `5184c00` | `UNREVIEWED` | Emulator prerequisite for direct raw-file tests with the programmer image |
 
 **Resolution Description**
 

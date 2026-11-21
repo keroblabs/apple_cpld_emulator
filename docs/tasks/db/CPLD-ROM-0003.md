@@ -109,6 +109,7 @@ content and rejects later slot copies in that mode.
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
 | `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile the reviewer findings and carry forward raw-file startup |
+| `mmu-rom-analysis` | `5184c00` | `UNREVIEWED` | Boot directly from a flat ROM file and verify raw device reads and desktop startup |
 
 **Resolution Description**
 
