@@ -24,6 +24,8 @@ module IOU_MMU_tb(
 `endif
     output          RAM_EN_N,
     output          ROM_EN_N,
+    output          BUS_RD_N,
+    output          BUS_WR_N,
 
     output          DEVSEL_n,
     output          PDL_STROBE_n,
@@ -210,6 +212,7 @@ MMU_addr u_MMU_addr (
     .ADDR            (ADDR),
     .PHI_0           (PHI_0),
     .RESET           (RESET), 
+    .DMA_N           (DMA_N),
     .CPU_RW          (CPU_RW),
     .MODE_SEL        (MODE_SEL),
 
@@ -228,6 +231,8 @@ MMU_addr u_MMU_addr (
 
     .RAM_EN_N        (RAM_EN_N),
     .ROM_EN_N        (ROM_EN_N),
+    .BUS_RD_N        (BUS_RD_N),
+    .BUS_WR_N        (BUS_WR_N),
 
     .IOSEL_N         (IOSEL_OUT_N),
     .IOSTB_N         (IOSTB_N),

@@ -28,6 +28,8 @@ void rtl_interconnect_capture( cpld_model_t *context )
     mmu->DEVSEL_N = rtl->DEVSEL_n;
     mmu->rom_en_n = rtl->ROM_EN_N;
     mmu->ram_en_n = rtl->RAM_EN_N;
+    mmu->bus_rd_n = rtl->BUS_RD_N;
+    mmu->bus_wr_n = rtl->BUS_WR_N;
 
     iou->devsel_3_n = rtl->C0BX_N;
     iou->devsel_6_n = rtl->C0EX_N;

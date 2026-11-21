@@ -10,7 +10,7 @@ The **128 KiB SST39VF010-70-4I-NHE** image uses the approved lower 64 KiB ROM ma
 and reserves the zero-filled upper 64 KiB. The package, 3.3 V interface,
 timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPLD-ROM-0005.md)
 
-**2026-11-21 review update:** CPLD-ROM-0001 through CPLD-ROM-0005 are **RESOLVED as software design/implementation tasks**, including the 128 KiB SST39VF010-70 image and byte-exact emulator export. The original owner `PR#3`/`PR#0` and slot-pattern checks are recorded; the developer repeated integration tests for the new image. **CPLD-HW-0001 is RESOLVED as a decision-only architecture record**: STM32 controls disk serial flash; the CPU ROM is the PLCC32 `-4I-NHE` part and uses the approved 128 KiB image. **CPLD-HW-0002 and CPLD-HW-0003 are OPEN** for two shared `BUS_RD_N`/`BUS_WR_N` RTL+emulator outputs (existing independent memory selects preserved, flash update capability retained), and SPI-slave RTL review/optimisation/bug fixes, respectively. These tickets cover **software RTL, emulator integration, tests and ATF1508ASV fitter feasibility**; schematic/PCB design, physical electrical validation and programmed-chip readback are **out of scope** and remain unverified. **CPLD-FW-0001 / CPLD-TEST-0001 remain OPEN** for populated slot7 ProDOS/IOMEM. RESOLVED is not CLOSED; PR integration/merge remains owner-controlled.
+**2026-11-21 review update:** CPLD-ROM-0001 through CPLD-ROM-0005 are **RESOLVED as software design/implementation tasks**, including the 128 KiB SST39VF010-70 image and byte-exact emulator export. The original owner `PR#3`/`PR#0` and slot-pattern checks are recorded; the developer repeated integration tests for the new image. **CPLD-HW-0001 is RESOLVED as a decision-only architecture record**: STM32 controls disk serial flash; the CPU ROM is the PLCC32 `-4I-NHE` part and uses the approved 128 KiB image. **CPLD-HW-0002 is in REVIEW** after shared `BUS_RD_N`/`BUS_WR_N` RTL and emulator integration; its authorised flash-update path and ATF1508ASV fitter evidence remain outstanding. **CPLD-HW-0003 remains OPEN** for SPI-slave RTL review/optimisation/bug fixes. These tickets cover **software RTL, emulator integration, tests and ATF1508ASV fitter feasibility**; schematic/PCB design, physical electrical validation and programmed-chip readback are **out of scope** and remain unverified. **CPLD-FW-0001 / CPLD-TEST-0001 remain OPEN** for populated slot7 ProDOS/IOMEM. RESOLVED is not CLOSED; PR integration/merge remains owner-controlled.
 
 ## CPLD-ROM — ROM mapping and flash layout
 
@@ -27,7 +27,7 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
 | `CPLD-HW-0001` | TASK | RESOLVED | Freeze STM32 ownership and 128 KiB PLCC flash architecture | M1 — ROM mapping | [Details](db/CPLD-HW-0001.md) |
-| `CPLD-HW-0002` | TASK | OPEN | Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator | M1 — ROM mapping | [Details](db/CPLD-HW-0002.md) |
+| `CPLD-HW-0002` | TASK | REVIEW | Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator | M1 — ROM mapping | [Details](db/CPLD-HW-0002.md) |
 | `CPLD-HW-0003` | TASK | OPEN | Review, fix and optimise IOU SPI-slave RTL | M3 — IOMEM disk service | [Details](db/CPLD-HW-0003.md) |
 
 ## CPLD-FW — Apple slot 7 ProDOS firmware

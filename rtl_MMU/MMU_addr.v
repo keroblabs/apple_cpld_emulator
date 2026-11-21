@@ -18,11 +18,14 @@ module MMU_addr(
 
     input           PHI_0,
     input           RESET,
+    input           DMA_N,
 
     input           CPU_RW,
 
     output          RAM_EN_N,
     output          ROM_EN_N,
+    output          BUS_RD_N,
+    output          BUS_WR_N,
     output          IOSEL_N,
     output          IOSTB_N,
     output          C0XX_N,
@@ -64,9 +67,17 @@ assign RAM_EN_N             = ~ram_enabled;
 
 wire        ram_enabled;
 wire        rom_enabled;
+wire        bus_phase_valid = RESET & DMA_N & PHI_0;
 wire        exp16_ram_en    = CPU_RW ? EXP16_RAM : EXP16_WRITE;
 wire        onboard_fw_n    = (IOSEL_N & IOSTB_N) | MODE_SEL;
 wire        slot_rom_read   = CPU_RW & ~rom_enabled & (IOSEL_INT_map | IOSTB_INT_map);
+wire        flash_read_selected = ~ROM_EN_N | ~IOSEL_N | ~IOSTB_N | ~C6XX_N;
+
+// Existing selects remain the device chip-selects. Shared strobes only
+// qualify a granted, high PHI_0 phase. There is not yet an authorised
+// flash-program selection in this interface.
+assign BUS_RD_N = ~(bus_phase_valid & CPU_RW & (ram_enabled | flash_read_selected));
+assign BUS_WR_N = ~(bus_phase_valid & ~CPU_RW & ram_enabled);
 
 // Keep the internal Apple image at its CPU addresses. A slot card sees a
 // 4 KiB window, even when MODE_SEL selects the external-card ROM path.

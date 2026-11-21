@@ -1,7 +1,7 @@
 # CPLD-HW-0002 — Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **ID:** `CPLD-HW-0002`  
-**Status:** `OPEN`  
+**Status:** `REVIEW`
 **Title:** Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **Description**
@@ -26,6 +26,10 @@ This is an **RTL and emulator software implementation ticket**. Hardware layout/
 - **2026-11-21 — Owner correction (supersedes initial four-output proposal):** Two shared outputs **`BUS_RD_N` and `BUS_WR_N` only**; retain current independent SRAM/flash chip selects. This saves two external CPLD pins and reduces duplicated decode.
 - **2026-11-21 — Owner correction (flash updates):** Preserve/exploit the **SST39VF010-70-4I-NHE in-system flash write/update capability**; do not specify a permanent WE# tie-high or always-inactive `FLASH_WR_N`. A write strobe by itself does not program NOR: the flash must be legitimately selected and receive the valid command/address/data sequence. Establish and test the authorised route without introducing accidental writes or silently creating a new Apple-visible API.
 - **2026-11-21 — Scope boundary:** **Software only** (Verilog RTL, emulator and verification). Fitting to the real ATF1508ASV target is required evidence for software readiness; physical board design, measurements, power sequencing and programmer readback are separate work.
+- **2026-11-21 — Rework:** Added exactly `BUS_RD_N` and `BUS_WR_N` through `MMU_addr`, `MMU`, the combined Verilator top, adapter capture and emulator memory selection. Both strobes are inactive during reset, PHI_0 low and DMA-owned phases. Reads use retained RAM/ROM/card selects, including IOSEL, IOSTB and slot 6. Writes are currently enabled only for selected RAM; ordinary CPU writes to ROM ranges leave both memory strobes inactive.
+- **2026-11-21 — Verification:** `bash rtl_MMU/verification/run_tests.sh` passes 787 checks / 0 failures in both default and `FULL_MMU_ADDR` builds. `bash emulator/onboard/verification/run_tests.sh` passes 29,995 combined ROM-bus checks / 0 failures in each address build; exported-image SHA-256 is identical between the builds. Tests cover RTL-strobe capture, RAM read/write, all flash-backed ROM selections, CFFF release, I/O, reset/idle, DMA, turnaround, mutually exclusive outputs and direction-mismatch probes proving the emulator consumes the sampled strobe/select pair.
+- **2026-11-21 — Flash-update gap:** The source has no authorised flash-write grant or command-selection route. `ROM_EN_N` is read-qualified, while card-ROM selects do not authorize NOR programming on writes. `BUS_WR_N` is therefore not asserted for flash and the emulator has no mutable NOR command model. No flash update was tested. Owner review is required to define the minimum authorised update context and command path within the ticket's no-new-pin/no-new-Apple-API constraints; preserve the existing flash write capability as an unresolved dependency.
+- **2026-11-21 — Fitter evidence:** `yosys`, `atf15xx_yosys` and `fit1508` are unavailable in this environment, and no fitter script was found under `/home/marcio/Tools`. The checked-in `rtl_MMU/MMU.fit` and `rtl_IOU/IOU.fit` are historical baseline reports from November 2025, not results for this revision. ATF1508ASV macrocells, pin allocation and timing remain unverified; keep this ticket in REVIEW pending the actual fitter run and flash-update design review.
 
 **Proposed Change**
 
@@ -86,4 +90,4 @@ Run the available Yosys/`atf15xx_yosys` and fitter flow for the **actual intende
 
 **Resolution Description**
 
-Pending RTL/emulator implementation, simulation tests and CPLD fitter evidence. No physical hardware design or in-system flash-programming protocol change has been approved by creating this ticket.
+Digital RTL/emulator implementation and the focused MMU/ROM-bus regressions are presented for review. Pending full Apple IIe regressions, an approved and tested flash-update route, and ATF1508ASV fitter/resource/timing evidence. No physical hardware design or in-system flash-programming protocol change is included.

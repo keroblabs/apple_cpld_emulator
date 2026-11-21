@@ -67,6 +67,7 @@ static void expect_rom(cpld_data_t &cpld, uint16_t cpu, uint32_t phys,
     const uint8_t data = access(cpld, cpu);
     ++checks;
     if (data != byte || cpld.MMU.mem_address >= 0x10000 || cpld.MMU.mem_address != phys ||
+        cpld.MMU.bus_rd_n || !cpld.MMU.bus_wr_n ||
         traces != previous_traces + 1 ||
         last_trace.cpu_addr != cpu || last_trace.phys_addr != phys ||
         last_trace.rom_en_n != rom_en_n || last_trace.data != byte || last_trace.out_of_bounds) {
@@ -169,7 +170,12 @@ int main(int argc, char **argv)
     expect_rom(cpld, 0xC800, 0x07800, bytes[0x07800], 1);
     const unsigned before_write = traces;
     access(cpld, 0xCFFF, false, 0xFF);
-    check(traces == before_write, "CFFF write releases without a ROM read");
+    check(traces == before_write && cpld.MMU.bus_rd_n && cpld.MMU.bus_wr_n,
+          "CFFF write releases without a ROM read or memory write strobe");
+    const unsigned before_rom_write = traces;
+    access(cpld, 0xD123, false, 0x55);
+    check(traces == before_rom_write && cpld.MMU.bus_rd_n && cpld.MMU.bus_wr_n,
+          "ordinary system-ROM write does not reach flash");
     expect_rom(cpld, 0xC800, 0x00800, 0, 1);
     check(access(cpld, 0xC0EC) == 0x6E && floppy_reads == 1 && !cpld.IOU.devsel_6_n,
           "slot-6 I/O still reaches the floppy controller");
@@ -187,12 +193,23 @@ int main(int argc, char **argv)
 
     const unsigned before_ram = traces;
     access(cpld, 0x0000, false, 0x5C);
+    check(cpld.MMU.bus_rd_n && !cpld.MMU.bus_wr_n,
+          "RAM write strobe is sampled and mutually exclusive");
     access(cpld, 0xC009, false); // ALTZP selects auxiliary zero page.
     access(cpld, 0x0000, false, 0xA6);
     check(!cpld.MMU.ram_en_n && cpld.MMU.rom_en_n && cpld.MMU.mem_address == 0x10000,
           "auxiliary zero-page write uses RAM address bit 16");
-    check(access(cpld, 0x0000) == 0xA6 && !cpld.MMU.ram_en_n && cpld.MMU.rom_en_n &&
+    check(access(cpld, 0x0000) == 0xA6 && cpld.MMU.bus_rd_n == 0 && cpld.MMU.bus_wr_n &&
+          !cpld.MMU.ram_en_n && cpld.MMU.rom_en_n &&
           cpld.MMU.mem_address == 0x10000, "auxiliary zero-page read uses RAM address bit 16");
+    check(memory_controller_access(&cpld, 0x0000, FALSE, 0xFF) == 0xA6,
+          "sampled BUS_RD_N selects RAM even if the caller direction disagrees");
+    cpld.MMU.bus_rd_n = TRUE;
+    cpld.MMU.bus_wr_n = FALSE;
+    memory_controller_access(&cpld, 0x0000, TRUE, 0x3C);
+    cpld.MMU.bus_wr_n = TRUE;
+    check(access(cpld, 0x0000) == 0x3C,
+          "sampled BUS_WR_N selects RAM even if the caller direction disagrees");
     access(cpld, 0xC008, false);
     check(access(cpld, 0x0000) == 0x5C && !cpld.MMU.ram_en_n && cpld.MMU.mem_address == 0,
           "main zero page kept its own byte");
