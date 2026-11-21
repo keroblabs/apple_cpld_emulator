@@ -2,11 +2,13 @@
 
 **Status:** Initial hard-disk programme tickets opened 2026-11-20 on `rtl-rework`.  
 **Methodology:** [Task and Bug Tracking Methodology](bug-tracking-methodology.md).  
-**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service; STM32 SPI master and RTC/serial-flash owner; **separate DIP32 hardware ROM programmed with one raw flash binary**; no new CPLD SPI master. [Authoritative raw ROM image contract](../rom-flash-image-contract.md).
+**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service. The STM32 remains the sole SPI master and owns the RTC and serial flash. A separate SST39VF010-70 serves CPU ROM from one raw flash binary. [Flash image contract](../rom-flash-image-contract.md)
 
 The task rows below give the current status of each ticket; design and implementation approvals are tracked in each individual ticket. See each ticket's detailed dependencies and acceptance criteria. Core workstreams: **M1** ROM mapping and hardware ROM-read strategy → **M2** slot7 ProDOS firmware; **M3** IOMEM protocol and hard-disk service can proceed alongside M1/M2 → **M4** image integration and ProDOS boot verification.
 
-**2026-11-21 image-size revision:** The owner selected **128 KiB SST39VF010-70** instead of the prior 256 KiB assumption; software/hardware rework is tracked by [CPLD-ROM-0005](db/CPLD-ROM-0005.md). The accepted first-64-KiB slot/Apple map remains unchanged; package and 3.3 V integration require hardware validation. Existing 256 KiB document language is historical pending rework.
+The **128 KiB SST39VF010-70** image uses the approved lower 64 KiB ROM map
+and reserves the zero-filled upper 64 KiB. The package, 3.3 V interface,
+timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPLD-ROM-0005.md)
 
 **2026-11-21 review update:** CPLD-ROM-0001/0002/0003 accepted for emulator integration (`RESOLVED`) after owner `PR#3`/`PR#0` and slot-pattern verification. CPLD-ROM-0004 software export is approved but remains `REVIEW` until device programming/readback and populated slot7/IOMEM acceptance; CPLD-HW-0001 remains `OPEN` for the electrical design. Integration/merging is owner-controlled.
 
@@ -17,8 +19,8 @@ The task rows below give the current status of each ticket; design and implement
 | `CPLD-ROM-0001` | TASK | RESOLVED | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
 | `CPLD-ROM-0002` | TASK | RESOLVED | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
 | `CPLD-ROM-0003` | TASK | RESOLVED | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
-| `CPLD-ROM-0004` | TASK | REVIEW | Produce and emulate one programmer-ready DIP32 flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
-| `CPLD-ROM-0005` | TASK | IN_PROGRESS | Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70 | M1 — ROM mapping | [Details](db/CPLD-ROM-0005.md) |
+| `CPLD-ROM-0004` | TASK | REVIEW | Produce and emulate one programmer-ready flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
+| `CPLD-ROM-0005` | TASK | REVIEW | Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70 | M1 — ROM mapping | [Details](db/CPLD-ROM-0005.md) |
 
 ## CPLD-HW — STM32 / CPLD hardware topology
 

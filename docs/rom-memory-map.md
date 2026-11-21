@@ -1,20 +1,17 @@
 # ROM and Expansion-ROM Memory Map (CPLD-ROM-0002)
 
-> **Owner-approved pending image-size change (2026-11-21):** The 256 KiB / 0x40000 backing described below is the **tested historical rev-4 baseline**. [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md) specifies the new **128 KiB SST39VF010-70** target: first 0x10000 bytes *unchanged*, upper 0x10000–0x1FFFF zero/reserved. Developer must revise this document to rev 5 after implementing/verifying the new export. Do not use old 256 KiB size for the target programmer.
-
-**Status:** Specification for review, rev 4 (2026-11-21, `mmu-rom-analysis`)
+**Status:** Specification for review, rev 5 (2026-11-21, `mmu-rom-analysis`)
 
 The emulator assembles its ROM from compiled arrays. It can write those same
-bytes as a single headerless 256 KiB DIP32 programmer image. The offsets below
-apply to both consumers. The hardware ticket owns the physical wiring and
-programmer readback.
-[DIP32 flash-image contract](rom-flash-image-contract.md)
+bytes as a single headerless 128 KiB image for the SST39VF010-70. Rev 5
+preserves the approved lower 64 KiB layout and reserves the upper 64 KiB.
+[Flash image contract](rom-flash-image-contract.md)
 
-**Tickets:** [MMU decode](tasks/db/CPLD-ROM-0001.md), [ROM layout](tasks/db/CPLD-ROM-0002.md), [emulator backing](tasks/db/CPLD-ROM-0003.md)
+**Tickets:** [MMU decode](tasks/db/CPLD-ROM-0001.md), [ROM layout](tasks/db/CPLD-ROM-0002.md), [emulator backing](tasks/db/CPLD-ROM-0003.md), [128 KiB retarget](tasks/db/CPLD-ROM-0005.md)
 
 ## 1. Emulator ROM offsets
 
-The emulator stores all ROM bytes in one 256 KiB array. Startup clears the
+The emulator stores all ROM bytes in one 128 KiB array. Startup clears the
 array to zero, copies `apple_rom_bin[]` to `0x08000`, and copies the six
 compiled 4 KiB slot arrays to their windows. Apple image offset zero
 corresponds to CPU address `$8000`. System ROM reads at `$D000–$FFFF` use
@@ -29,7 +26,7 @@ their CPU address as the array index, subject to the language-card switch.
 | `0x08000–0x0BFFF` | 16 KiB | First half of the Apple image, outside the CPU ROM read windows |
 | `0x0C000–0x0CFFF` | 4 KiB | Apple image bytes at their original offsets. `$C0xx` remains I/O and the internal Cx soft switches select `$C100–$CFFF`. |
 | `0x0D000–0x0FFFF` | 12 KiB | Apple system ROM |
-| `0x10000–0x3FFFF` | 192 KiB | Zero-filled reserved target capacity |
+| `0x10000–0x1FFFF` | 64 KiB | Zero-filled reserved flash capacity, outside the CPU ROM decode |
 
 Each compiled slot array occupies `slot × 0x1000` and defaults to zero fill.
 The [backing test](../emulator/onboard/verification/test_rom_backing.c) checks
@@ -76,9 +73,11 @@ with the CPU offset, using bits `[7:0]` for a card IOSEL read and bits
 `[11:0]` for RAM, internal ROM and IOSTB. `FULL_MMU_ADDR` supplies all 17
 bits directly. Both builds are probed in the [MMU test](../rtl_MMU/verification/tb_mmu_addr.cpp)
 and the [combined ROM bus test](../emulator/onboard/verification/test_rom_bus.cpp).
-Physical bus arbitration and DIP32 ROM timing remain in [CPLD-HW-0001](tasks/db/CPLD-HW-0001.md).
-A board using the 5-pin MMU and this raw slot layout needs the same IOSEL
-low-address selection on its backing path.
+Flash A16 stays low for ROM in both builds, while the separate RAM bank
+select can drive RAM A16 high. The board's 5-bit MMU interface requires a
+mux to drive flash A11–A8 low for card IOSEL. The hardware handoff specifies
+the A16 strap, package and voltage interfaces, and bus timing.
+[CPLD-HW-0001](tasks/db/CPLD-HW-0001.md)
 
 ## 3. Compiled slot ROM inputs
 
@@ -125,10 +124,10 @@ build/apple_cpld -w /path/to/flash-image.bin
 ```
 
 `-w IMAGEFILE` is the sole command-line option. It writes the populated
-backing as exactly 262144 bytes in physical address order before the CPU
+backing as exactly 131072 bytes in physical address order before the CPU
 runs. On success the emulator runs from that backing. With no arguments the
 emulator starts from the same arrays and creates no ROM file.
 
-The output is the expected 256 KiB ROM contents for the real target. Device
-wiring and full-chip readback are verified separately.
-[DIP32 flash-image contract](rom-flash-image-contract.md)
+The output covers all 17 address bits of the physical flash. The target
+reads the lower bank with A16 held low. Full-chip programmer readback is
+tracked separately. [Flash image contract](rom-flash-image-contract.md)

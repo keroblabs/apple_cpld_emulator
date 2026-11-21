@@ -6,7 +6,7 @@
 
 **Description**
 
-Specify the compiled ROM inputs and the 256 KiB map shared by the emulator
+Specify the compiled ROM inputs and the lower-bank map shared by the emulator
 and target flash. Define each Apple-visible window and its byte offsets.
 
 **Details**
@@ -17,7 +17,7 @@ and target flash. Define each Apple-visible window and its byte offsets.
 - Branch baseline: `mmu-rom-analysis` at `ffb534d`
 - Dependencies: [CPLD-ROM-0001](CPLD-ROM-0001.md), [CPLD-HW-0001](CPLD-HW-0001.md)
 
-The 256 KiB target image spans `0x00000–0x3FFFF`. It contains
+The lower 64 KiB contains
 `apple_rom_bin[]` at `0x08000–0x0FFFF` and `slot1_rom_bin[]`,
 `slot2_rom_bin[]`, `slot4_rom_bin[]`, `slot5_rom_bin[]`,
 `slot6_rom_bin[]` and `slot7_rom_bin[]` at `slot × 0x1000`. Slot 0 and
@@ -43,7 +43,7 @@ ROM defines the corresponding macro and the array before the fallback.
 | ROM2-R4 and ROM2-R6, example offsets and metadata validation | The raw slot rework supersedes the three-entry example and descriptor validation. All destination ranges are fixed. The release image is a flat file whose offsets are the physical ROM addresses. |
 | ROM2-R5, exact CFFF data and phase | The map records the selected slot's `+0xFFF` byte at CFFF and release on the next cycle. ROM1-R4 has direct Verilator assertions and a combined bus test. |
 
-### Independent final review — 2026-11-21 (accepted)
+### Independent final review — 2026-11-21 (accepted rev 4 baseline)
 
 **Disposition: APPROVED / RESOLVED.** `docs/rom-memory-map.md` rev 4 reflects the owner-approved **256 KiB contiguous binary assembled from compiled sources**: slot windows 0–7 each occupy 4096 bytes, the six included slot arrays are 1/2/4/5/6/7, slots 0 and 3 contain no card image, and the unmodified Apple 32 KiB image begins at `0x08000`. Each card IOSEL is at slot offset `0x000–0x0FF`; its IOSTB is at `0x800–0xFFF`. The prior tagged `CPRM` format and the earlier IOSEL `slot<<8` offset are superseded.
 
@@ -105,7 +105,9 @@ and programming verification.
 
 **Resolution Description**
 
-**Accepted ${today}:** The emulator's logical 256 KiB ROM layout and six slot-array convention are approved. The output-file implementation is covered by ROM-0003/ROM-0004; physical programming and slot7 firmware remain separate acceptance gates. Ticket is RESOLVED, pending integration/merge.
+**Accepted 2026-11-21.** The lower-bank ROM layout and six slot-array
+convention were approved with rev 4. Rev 5 preserves those offsets in the
+128 KiB target image. [CPLD-ROM-0005](CPLD-ROM-0005.md)
 
-Rev 4 documents the compiled sources, byte offsets, reserved windows and
-256 KiB export. Physical ROM timing remains in CPLD-HW-0001.
+Physical ROM timing remains in CPLD-HW-0001. This ticket is RESOLVED,
+pending integration.

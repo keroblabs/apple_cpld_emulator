@@ -1,7 +1,7 @@
-# CPLD-ROM-0005 — Retarget the ROM image and physical interface to 128 KiB SST39VF010-70
+# CPLD-ROM-0005 — Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70
 
 **ID:** `CPLD-ROM-0005`  
-**Status:** `IN_PROGRESS`\
+**Status:** `REVIEW`\
 **Title:** Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70
 
 **Description**
@@ -51,17 +51,23 @@ For each supported card slot `N ∈ {1,2,4,5,6,7}`:
 
 **Explicitly preserve** the existing `#ifndef SLOT1_ROM`, `SLOT2_ROM`, `SLOT4_ROM`, `SLOT5_ROM`, `SLOT6_ROM`, `SLOT7_ROM` guards, their `slotN_rom_bin[]` symbols, and compile-time 4 KiB assertions. No slot 0 or slot 3 array should be added.
 
-## 2. Device facts and hardware compatibility: do not assume DIP32!
+## 2. Device facts and hardware compatibility
 
 **Selected electrical device family:** `SST39VF010-70`, a 1 Mbit, 128K × 8, **70 ns**, parallel NOR flash with address inputs **A0–A16**, data **DQ0–DQ7** and active-low **CE#**, **OE#**, **WE#**. A16 selects the unused/upper 64 KiB and is **not needed for any current CPU-ROM read**.
 
-**Critical packaging caveat:** `SST39VF010-70` by itself does **not** identify a DIP-32 part. Microchip's datasheet shows **32-pin PLCC (`-NH…`) and 32-pin TSOP (`-WH…`)**, not a through-hole PDIP32 option for this exact VF010 family. If our target is a **DIP32 socket**, identify the complete purchase part number **including suffix** and define an appropriate **PLCC32-to-DIP32 or TSOP32-to-DIP32 adapter**, or change the PCB footprint after explicit owner approval. **Do not assume a 32-pin PLCC/TSOP is directly pin-compatible with a 32-pin DIP socket**. Document the actual adapter pin map and orientation. The selected **silicon** remains SST39VF010-70 unless the owner makes a new decision.
+Microchip DS20005023E lists PLCC32 (`-NHE`) and TSOP32 (`-TU`) for
+this family. Confirm the complete purchase part number, including suffix.
+A DIP32 socket requires a pin-mapped PLCC32 or TSOP32 adapter and verified
+orientation, or an owner-approved footprint change.
 
 **Voltage and timing are blocking physical-hardware gates.** This is a **low-voltage flash** (nominal **3.3 V**, VF variant documented 2.7–3.6 V in datasheet features/AC and distributor listings; verify the exact purchased suffix and latest datasheet before fabrication). It is **not a 5 V-powered ROM**. Normal pin stress limits are `-0.5 V` to `VDD+0.5 V` (datasheet has a special A9 allowance; do not treat that as general 5 V tolerance). The Apple IIe CPU/legacy bus and any 5 V CPLD signals must **not** drive the flash address/control pins directly at 5 V. Design 5 V→3.3 V translation or verified 3.3 V drive for **all** address and enable inputs; verify the **3.3 V→Apple-side DQ output** meets the actual CPU/CPLD VIH and bus driver requirements, adding a suitable buffered level translator if necessary. Respect bus direction and high-Z timing. Provide a regulated 3.3 V rail and bypassing. Document rail sequencing and avoid flash back-power through interface pins.
 
 **Read timing:** `tAA` address and `tCE` chip-enable access **70 ns max**, `tOE` **35 ns max**, and `tCHZ`/`tOHZ` disable-to-high-Z **25 ns max** (per Microchip DS20005023 timing table for the VF-70). Verify the actual CPU/PHI_0 data setup/hold, address mux and level-translator propagation margins; 70 ns on a datasheet **does not itself prove timing closure**. Recommended power-up-to-read delay is 100 µs. On target, this flash is **read-only**: `WE#` must be held safely high at the flash VDD (not switched with CPU R/W); programming happens outside the target or through an explicitly isolated future programming interface. `CE#` and `OE#` must be asserted only for authorised ROM read cycles, released during RAM/I/O/writes/reset where appropriate, and tri-stated before any competing device drives data. `C6XX_N` can assert during internal or external slot6 cases; resolve actual bus owner rather than blindly OR-ing chip enables.
 
-**PLCC-32 pin cues from Microchip drawing for VF010** (confirm against the *actual chosen suffix* before PCB/adapter design): A16=pin 2; VDD=32; VSS=16; WE#=31; CE#=22; OE#=24; A0=12; A7=5; A8=27; A9=26; A10=23; A11=25; A12=4; A13=28; A14=29; A15=3. Pins 1 and 30 are NC for this density. The TSOP has **different pin numbering**; use the manufacturer's drawing, not these PLCC numbers, for TSOP.
+The reference design straps A16 to flash VSS and leaves the RAM bank line
+separate. The hardware ticket lists all PLCC32 and TSOP32 pins and the
+timing and arbitration requirements.
+[SST39VF010-70 reference connections](CPLD-HW-0001.md#sst39vf010-70-reference-connections)
 
 **Authoritative sources and vendor checks:**
 
@@ -102,7 +108,9 @@ For each supported card slot `N ∈ {1,2,4,5,6,7}`:
 
 ## 5. Required testing and evidence
 
-The existing owner verification on the current 256 KiB software is **accepted baseline evidence**, not a reason to skip regression after shrinking the image. Record before/after comparisons and a new test run for this ticket.
+Use `f4da91d` and the owner's earlier 256 KiB verification as the baseline
+for this retarget. The new test results and before/after comparisons are
+recorded below.
 
 1. **Build/static:** Build the emulator in normal/release settings, 5-bit MMU and `FULL_MMU_ADDR`. Both must compile with warnings enabled. Deliberately make one `SLOTn_ROM` override short: the existing 4096-byte assertion must fail compilation.
 2. **Exact image:** With no option, emulator creates **no output file**. With `-w <path>`, image length **exactly 131072** and no appended header. Compare **every byte** with an independently composed expected file: same default compiled arrays, Apple ROM at `0x08000`, six slot arrays at `N*0x1000`, no slot 0/3 image, and all `0x10000–0x1FFFF` zero. Verify no accidental duplication of first 64 KiB into upper 64 KiB.
@@ -116,14 +124,15 @@ The existing owner verification on the current 256 KiB software is **accepted ba
 
 ## 6. Acceptance criteria
 
-- [ ] The emulator's compiled ROM backing is **0x20000 bytes**; slot defaults and `apple_rom_bin` layout are untouched, with upper 64 KiB reserved and zero-filled.
-- [ ] `-w IMAGEFILE` emits exactly **131072 bytes**, no runtime ROM input option exists, and without `-w` the emulator produces no file. Export and executed ROM are byte-identical.
-- [ ] First 64 KiB is **bit-for-bit identical** to prior tested image with identical compiled inputs. Whole-file 128 KiB, gap/boundary/OOB and independent-build reproducibility tests pass.
-- [ ] Both MMU address variants and integrated ROM bus tests pass, confirming that active ROM reads use `0x0000–0xFFFF`, physical ROM A16 stays low and RAM bank bit16 retains its original behaviour.
-- [ ] Apple boot, `PR#3`/`PR#0`, and six-slot compiled pattern ROM probes pass after the change; include slot6 bootstrap test. Preserve owner manual-verification evidence.
-- [ ] Revised ROM map and flash-image contract clearly state **128 KiB SST39VF010-70**, physical A0–A16, current unused upper 64 KiB, and no ROM bank switching.
+- [x] The emulator's compiled ROM backing is **0x20000 bytes** and the unchanged slot and Apple arrays fit in the lower 64 KiB. The reserved upper 64 KiB is zero-filled.
+- [x] The optional `-w IMAGEFILE` emits exactly **131072 bytes** from the backing used by the CPU. Startup with no arguments creates no file.
+- [x] The lower 64 KiB matches the approved images byte-for-byte with identical compiled inputs. Whole-file, gap, boundary, out-of-bounds and independent-build tests pass.
+- [x] Both MMU and integrated bus variants assert ROM A16 low and verify auxiliary RAM banking at `0x10000`.
+- [x] Apple boot, `PR#3`/`PR#0`, all six compiled slot patterns and the Disk II bootstrap pass. The owner's earlier verification remains recorded.
+- [x] Rev 5 of the ROM map and the flash contract specify the **128 KiB SST39VF010-70**, physical A0–A16 and the zero-filled reserved upper 64 KiB.
+- [x] The reference pin map, A16 strap, mux, bus arbitration, voltage domains and timing are recorded in CPLD-HW-0001.
 - [ ] Exact purchase suffix/package is confirmed; target's **DIP32 socket versus VF010 PLCC/TSOP** compatibility is explicitly addressed through a pin-mapped adapter or owner-approved mechanical revision.
-- [ ] Physical voltage translation, chip-enable/data ownership, A16 and IOSEL low-address wiring, 70 ns read timing, and safe WE# high are reviewed in `CPLD-HW-0001`; hardware acceptance remains pending until demonstrated.
+- [ ] The physical board demonstrates safe voltage translation, exclusive data ownership, A16 and IOSEL wiring, CPU read margins and WE# high. Record measurements in CPLD-HW-0001.
 - [ ] When hardware is available: program the exact export and compare **full 128 KiB flash readback** against the source image. Record chip identifier, programmer, source SHA, image SHA and results; until then **PENDING HARDWARE VERIFICATION**.
 
 **Closure policy:** The ROM image/emulator **software portion** may be reviewed and resolved after tests. The *physical chip/adapter/voltage/PCB/readback* work is also tracked by `CPLD-HW-0001`/`CPLD-ROM-0004`, and shall not be claimed complete before hardware evidence. A new decision to use the spare 64 KiB needs its **own** design/ticket; this ticket must not implement it.
@@ -135,6 +144,20 @@ The existing owner verification on the current 256 KiB software is **accepted ba
 - **2026-11-21 — Datasheet review:** Microchip VF010 is 128K×8, 70 ns, low voltage, **PLCC32 or TSOP32**. The suffix and exact adapter need confirmation: **do not assume actual DIP32 packaging**; do not connect 5 V signals to the low-voltage flash unprotected.
 - **2026-11-21 — Verification baseline:** Owner previously ran the emulator, `PR#3`/`PR#0`, and all six card slot ROM patterns successfully on the 256 KiB implementation. These tests should be repeated for ROM-0005 with the new 128 KiB export.
 - **2026-11-21 — Status change:** `OPEN → IN_PROGRESS` on `mmu-rom-analysis`. Capture exports from the approved `f4da91d` sources and compare their lower 64 KiB against the resized backing using the same compiled inputs. Verify ROM A16 and auxiliary RAM independently. Review the selected device pinout and timing for the hardware handoff.
+- **2026-11-21 — Implementation:** Set `ROM_BACKING_SIZE` to `0x20000u`. The existing startup copy, bounds check, image writer and CLI log use this size. Source review and simulation confirmed that the MMU already translates ROM below `0x10000`, so the RTL and sampled memory-controller path were retained. The compiled Apple array and all six default slot arrays are identical to `f4da91d`. Updated the ROM map to rev 5 and aligned the flash contract and release gates. DS20005023E gives `-NHE` and `-TU` package suffixes. [Hardware pin and timing handoff](CPLD-HW-0001.md#sst39vf010-70-reference-connections)
+- **2026-11-21 — Build and bounds tests:** Debug and Release CMake builds succeeded with warnings enabled for the 5-bit and `FULL_MMU_ADDR` interfaces. The Release SDL mouse and LCD driver warnings also occur on the approved baseline. Tested on Fedora 42, GCC 15.2.1, CMake 3.31.6, Verilator 5.045 (v5.044-96-g30e6cd909) and SDL 2.33.0 with dummy video and software rendering for desktop probes. `bash rtl_MMU/verification/run_tests.sh` passed 529 assertions per variant. `bash emulator/onboard/verification/run_tests.sh` passed 33 backing checks and 29,991 combined bus checks per variant. The tests covered ROM A16 low, auxiliary zero-page read/write at `0x10000`, separate main RAM, ROM boundaries at `0x0FFFF`, `0x10000` and `0x1FFFF`, and traced rejection at `0x20000` and `0x2FFFF`. The one-byte `SLOT1_ROM` override failed the existing 4096-byte assertion.
+- **2026-11-21 — Export parity:** Rebuilt `f4da91d` and exported 262144-byte default and six-pattern images. The first 65536 bytes of each matched the corresponding new export byte-for-byte. Independently constructed 131072-byte expected images from the original Apple array, the slot inputs and zero fill. Every byte matched, including all slot padding, the empty slots and the reserved upper bank. The four separate default builds produced identical files. The 5-bit Debug and full-address Release pattern builds also reproduced exactly. Each row records SHA-256 for the compared bytes.
+
+  | Compiled inputs | Lower 65536 bytes, approved and new | New 131072-byte file |
+  | --- | --- | --- |
+  | Apple ROM and six zero defaults | `f3a7050bfcf2f8c96a7f3b8186ca546d7b40969141e4c086ada75d4f2069609d` | `96625de7fd349a4d117c9bb283fdded04af06841ee9db42c65b0f73b5e268498` |
+  | Six IOSEL/IOSTB patterns | `4428336dfec1336e28b376c44e15d248ce867d6b88663a897b42a1891a56d910` | `8aac648d1ed2b5d358d988f33cdf5023b88d785e57fe20a54c0e4eed67928a23` |
+  | Disk II, compiled `SLOT6_ROM` from `disk_drive_fw[]` in `disc_drive.c` | — | `c4d2b8f0ef202f6f6bf698604b0b9ecabbd28823ab35d5a5be182ad4aa8931a2` |
+
+- **2026-11-21 — CLI and failure tests:** Startup without arguments reached the Apple IIe prompt and left an empty working directory. Unknown, missing, empty and extra arguments returned usage. A 1024-byte file-size limit caused the real `-w` command to fail while preserving the previous image byte-for-byte and removing its temporary file. Both combined regression builds emitted identical fixture images.
+- **2026-11-21 — Desktop slot verification:** Built temporary compiled overrides for slots 1, 2, 4, 5, 6 and 7 with IOSEL values `D1 D2 D4 D5 D6 D7` and IOSTB values `A1 A2 A4 A5 A6 A7`. Applesoft `PEEK` checked the data, physical address and select strobes for 13,839 reads per address variant, including all 13,824 visible bytes of the six windows. Each `$CFFF` returned the selected expansion byte and the following `$C800` returned slot 0's zero. Internal slot 3 used the Apple ROM, and external slot 3 read zero. Both runs used `-w` and verified the emitted image.
+- **2026-11-21 — Desktop boot and disk:** With `-w`, the default build reached Applesoft. The keyboard probe entered internal ROM at `$C300` for `PR#3`, returned with `PR#0` and captured the result `5` and new prompt after `PRINT 2+3`. The compiled Disk II fixture executed at `$C600`, loaded all 256 bytes of sector zero from a scratch copy of `images/discs/solo-flight.dsk` into `$0800–$08FF` and fetched its first instruction at `$0801`. The disk copy matched the source after the run.
+- **2026-11-21 — Status change:** `IN_PROGRESS → REVIEW` after software verification. The proposed reference connections use a fixed A16-low strap. The actual part suffix, adapter or footprint, voltage and timing measurements, and complete chip readback are pending physical verification.
 
 **Proposed Change**
 
@@ -144,7 +167,14 @@ Implement the narrowly scoped **128 KiB** ROM backing and single-image exporter 
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `mmu-rom-analysis` | `216b012` | `UNREVIEWED` | Start the flash retarget and record the approved baseline |
 
 **Resolution Description**
 
-Pending implementation and owner review. No RTL/emulator changes or hardware verification are implied by creation of this ticket.
+The emulator retarget and verification are ready for owner review. The
+131072-byte export preserves the approved lower 64 KiB and zero-fills the
+reserved upper 64 KiB. [ROM memory map rev 5](../../rom-memory-map.md)
+
+**Pending physical hardware verification.** Schematic and electrical
+validation and the byte-for-byte 131072-byte chip readback are tracked in
+[CPLD-HW-0001](CPLD-HW-0001.md) and [CPLD-ROM-0004](CPLD-ROM-0004.md).

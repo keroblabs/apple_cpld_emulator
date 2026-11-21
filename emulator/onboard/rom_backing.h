@@ -7,7 +7,8 @@
 extern "C" {
 #endif
 
-#define ROM_BACKING_SIZE 0x40000u
+// SST39VF010 backing. The MMU selects the lower 64 KiB for ROM reads.
+#define ROM_BACKING_SIZE 0x20000u
 #define ROM_SYSTEM_BASE  0x08000u
 #define ROM_SYSTEM_SIZE  0x08000u
 #define ROM_SLOT_SIZE    0x01000u
@@ -18,7 +19,7 @@ void rom_backing_init( void );
 // Export the populated backing in physical address order. Returns -1 on error.
 int rom_backing_write_image( const char *path );
 
-// Check the physical address against the 256 KiB backing. Out-of-range reads
+// Check the physical address against the 128 KiB backing. Out-of-range reads
 // return zero and set out_of_bounds when the caller supplies it.
 uint8_t rom_backing_read( uint32_t phys_addr, int *out_of_bounds );
 

@@ -34,7 +34,7 @@ Create an Apple 6502/65C816-compatible slot7 firmware skeleton with the ProDOS b
 
 **Proposed Change**
 
-### Mandatory DIP32 flash-image integration
+### Flash image integration
 
 Build the 256-byte IOSEL entry and the slot-7 IOSTB expansion into the
 4096-byte `slot7_rom_bin[]` input and define `SLOT7_ROM`. Verify its bytes,
@@ -56,7 +56,7 @@ image via `-w`.
 
 ### Single-image acceptance gate (added 2026-11-21)
 
-- [ ] The emulator executes the compiled slot-7 ROM and exports its exact entry and expansion bytes at the physical offsets in the final DIP32 image.
+- [ ] The emulator executes the compiled slot-7 ROM and exports its exact entry and expansion bytes at the physical offsets in the SST39VF010-70 image.
 
 **Commits**
 

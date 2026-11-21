@@ -66,7 +66,8 @@ static void expect_rom(cpld_data_t &cpld, uint16_t cpu, uint32_t phys,
     const unsigned previous_traces = traces;
     const uint8_t data = access(cpld, cpu);
     ++checks;
-    if (data != byte || cpld.MMU.mem_address != phys || traces != previous_traces + 1 ||
+    if (data != byte || cpld.MMU.mem_address >= 0x10000 || cpld.MMU.mem_address != phys ||
+        traces != previous_traces + 1 ||
         last_trace.cpu_addr != cpu || last_trace.phys_addr != phys ||
         last_trace.rom_en_n != rom_en_n || last_trace.data != byte || last_trace.out_of_bounds) {
         ++failures;
@@ -95,13 +96,14 @@ static bool read_export(const char *path, uint8_t *bytes)
     std::ifstream input(path, std::ios::binary);
     input.read(reinterpret_cast<char *>(bytes), ROM_BACKING_SIZE);
     const bool complete = input && input.peek() == EOF && !input.bad();
-    check(complete, "export contains exactly 262144 bytes");
+    check(complete, "export contains exactly 131072 bytes");
     if (!complete) {
         return false;
     }
 
     // Check the whole file, including the IOSEL padding and unused regions.
-    static uint8_t expected[0x40000];
+    static uint8_t expected[0x20000];
+    static_assert(sizeof(expected) == ROM_BACKING_SIZE, "128 KiB ROM backing");
     memcpy(expected + 0x8000, apple_rom_bin, sizeof(apple_rom_bin));
     const unsigned offsets[] = {0x000, 0x0FF, 0x100, 0x7FF, 0x800, 0xFFE, 0xFFF};
     for (unsigned slot : compiled_slots) {
@@ -183,6 +185,20 @@ int main(int argc, char **argv)
     expect_apple_rom(cpld, 0xFFFC);
     expect_apple_rom(cpld, 0xFFFD);
 
+    const unsigned before_ram = traces;
+    access(cpld, 0x0000, false, 0x5C);
+    access(cpld, 0xC009, false); // ALTZP selects auxiliary zero page.
+    access(cpld, 0x0000, false, 0xA6);
+    check(!cpld.MMU.ram_en_n && cpld.MMU.rom_en_n && cpld.MMU.mem_address == 0x10000,
+          "auxiliary zero-page write uses RAM address bit 16");
+    check(access(cpld, 0x0000) == 0xA6 && !cpld.MMU.ram_en_n && cpld.MMU.rom_en_n &&
+          cpld.MMU.mem_address == 0x10000, "auxiliary zero-page read uses RAM address bit 16");
+    access(cpld, 0xC008, false);
+    check(access(cpld, 0x0000) == 0x5C && !cpld.MMU.ram_en_n && cpld.MMU.mem_address == 0,
+          "main zero page kept its own byte");
+    check(traces == before_ram && rom_backing_read(0x10000, nullptr) == 0,
+          "auxiliary RAM activity leaves the reserved ROM bank untouched");
+
     // Exercise the language card via the actual C08x soft switches.
     access(cpld, 0xC083);
     access(cpld, 0xC083);
@@ -193,9 +209,9 @@ int main(int argc, char **argv)
 
     check(rom_backing_oob_count() == 0, "all RTL-generated ROM reads in bounds");
     // An invalid address is injected here since MEM_ADDR_OUT is only 17 bits.
-    cpld.MMU.mem_address = 0x40000;
+    cpld.MMU.mem_address = 0x20000;
     check(memory_controller_access(&cpld, 0xD123, true, 0) == 0 &&
-          last_trace.out_of_bounds && rom_backing_oob_count() == 1,
+          last_trace.phys_addr == 0x20000 && last_trace.out_of_bounds && rom_backing_oob_count() == 1,
           "memory controller exposes an out-of-bounds ROM read");
 
     printf("ROM bus: %u checks, %u failures\n", checks, failures);

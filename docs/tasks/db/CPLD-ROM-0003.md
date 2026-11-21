@@ -7,7 +7,7 @@
 **Description**
 
 Serve the original Apple ROM and six compiled card ROM arrays from one
-256 KiB backing. Populate the backing during startup so it also defines
+shared backing. Populate the backing during startup so it also defines
 the target programmer image.
 
 **Details**
@@ -27,9 +27,10 @@ array's length. The slot 0 and external slot 3 regions are zero-filled.
 The Apple IIe MMU retains access to the internal slot-3 bytes through the
 Apple ROM. [ROM map](../../rom-memory-map.md)
 
-With `-w IMAGEFILE`, startup exports exactly 262144 bytes from the populated
-backing and then runs from it. A startup with no arguments creates no image.
-The export contract and physical verification are tracked in
+With `-w IMAGEFILE`, startup exports the populated backing and then runs
+from it. A startup with no arguments creates no image. The original
+accepted export was 262144 bytes. The 128 KiB retarget is tracked in
+[CPLD-ROM-0005](CPLD-ROM-0005.md) and physical verification remains in
 [CPLD-ROM-0004](CPLD-ROM-0004.md).
 
 Normal board reads use the address sampled from `MEM_ADDR_OUT`, with
@@ -37,7 +38,7 @@ Normal board reads use the address sampled from `MEM_ADDR_OUT`, with
 in emulator mode. The shared backing traces the original CPU address,
 physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 
-### Review findings and current evidence
+### Review findings and evidence at the 256 KiB baseline
 
 | Finding | Evidence for re-review |
 | --- | --- |
@@ -49,7 +50,7 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 | ROM3-R7, partial mutation | The backing is assembled before export. The writer replaces the destination after the complete image is written and closed. A forced short write preserves the previous file. |
 | ROM3-R8, packaging and integration | The emulator exports its startup backing directly, and both combined bus builds compare real MMU reads with that file. Physical readback remains in CPLD-ROM-0004. |
 
-### Independent final review — 2026-11-21 (accepted)
+### Independent final review — 2026-11-21 (accepted 256 KiB baseline)
 
 **Disposition: APPROVED / RESOLVED.** The emulator is a development tool with its ROM inputs **compiled in**. `slot_roms.h` provides six `#ifndef SLOTn_ROM` guarded 4096-byte zero defaults; `rom_backing.c` statically asserts every array's length and creates one 262,144-byte backing. It copies the Apple ROM to `0x08000`, copies slot arrays to `N*0x1000`, leaves slots 0/3 and high reserved address space zero, and serves memory through sampled MMU physical addresses. Runtime input-ROM loading/overlays have been eliminated in favour of compiled sources.
 

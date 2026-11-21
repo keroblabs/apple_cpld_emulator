@@ -72,8 +72,10 @@ static void expect_bus(const VMMU_addr &dut, const char *test, const Bus &bus)
 {
 #ifdef FULL_MMU_ADDR
     const uint32_t expected_address = bus.address;
+    const uint32_t bank_bit = 0x10000;
 #else
     const uint32_t expected_address = bus.address >> 12;
+    const uint32_t bank_bit = 0x10;
 #endif
     expect(dut, test, "MEM_ADDR_OUT", dut.MEM_ADDR_OUT, expected_address);
     expect(dut, test, "ROM_EN_N", dut.ROM_EN_N, bus.rom_en_n);
@@ -82,6 +84,10 @@ static void expect_bus(const VMMU_addr &dut, const char *test, const Bus &bus)
     expect(dut, test, "IOSTB_N", dut.IOSTB_N, bus.iostb_n);
     expect(dut, test, "C0XX_N", dut.C0XX_N, bus.c0xx_n);
     expect(dut, test, "C6XX_N", dut.C6XX_N, bus.c6xx_n);
+
+    if (dut.CPU_RW && dut.RAM_EN_N && (!dut.ROM_EN_N || !dut.IOSEL_N || !dut.IOSTB_N || !dut.C6XX_N)) {
+        expect(dut, test, "ROM A16", dut.MEM_ADDR_OUT & bank_bit, 0);
+    }
 }
 
 int main(int argc, char **argv)
@@ -180,6 +186,10 @@ int main(int argc, char **argv)
     aux.ramrd = 1;
     cpu_cycle(dut, 0x2000, true, aux);
     expect_bus(dut, "auxiliary RAM", {0x12000, 1, 0});
+    dut.SW_ALTZP = 1;
+    cpu_cycle(dut, 0x0000, true, external);
+    expect_bus(dut, "auxiliary zero page", {0x10000, 1, 0});
+    dut.SW_ALTZP = 0;
 
     Switches language_card = external;
     language_card.exp16_ram = 1;

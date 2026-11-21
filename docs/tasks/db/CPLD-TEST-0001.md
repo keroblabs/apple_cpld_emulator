@@ -32,7 +32,7 @@ Exercise the whole path with real ROM fetch and Apple 65816 execution: ROM_EN_N/
 
 **Proposed Change**
 
-### Mandatory DIP32 flash-image integration
+### Flash image integration
 
 Boot the emulator with the release slot arrays and `-w IMAGEFILE`. Verify
 slot-6 and slot-7 bytes against the export, run ProDOS block reads, and
