@@ -34,7 +34,7 @@ The chronological Notes are valuable but long tickets do not show the latest com
 - **2026-11-21 — REPORTER (Project owner) — Request:** Make completed versus pending work evident at a glance; identify reporter and reviewer as the project owner and GPT-6, with assignee as the implementing person or agent. Trace existing Notes to their source where reasonably possible.
 - **2026-11-21 — REVIEWER (GPT-6) — Investigation:** Existing methodology had append-only date/activity Notes and per-commit tracking but no roles or mutable work summary. Git history identifies commit authors, but historical author `Kerob Labs` does not alone identify the actual reviewer, reporter or assignee.
 - **2026-11-21 — ASSIGNEE (GPT-6) — Implementation:** Added three mandatory roles on new/migrated tickets, a short DONE/PENDING/BLOCKED table, prospective role-labelled notes, and a conservative attribution protocol for legacy Notes. Existing note text remains append-only and unmodified.
-- **2026-11-21 — ASSIGNEE (GPT-6) — Verification:** Repository-level document validator added to check the two migrated tickets and index; validation is static, not RTL or hardware testing. Owner execution and review of the validator remain required.
+- **2026-11-21 — ASSIGNEE (GPT-6) — Verification:** Repository-level `tests/test_ticket_provenance.py` document validator added to check the two migrated tickets and index. Additionally, 26/26 direct checks against the committed GitHub document blobs passed: role headers, title/status consistency, current-work state, prospective labelled notes, preservation of original HW-0004 historical Notes, and outstanding post-change fitting criteria. The Python file was not executed on `devel` during this commit; the direct checks are static and not RTL or hardware tests. Owner execution and review remain required.
 
 **Proposed Change**
 
@@ -50,7 +50,8 @@ Add `Reporter`, `Reviewer`, and `Assignee` to the top of new/migrated tickets. I
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
-| --- | --- | --- | --- |
+| --- | --- | --- |
+| `rtl-compile-work` | `d7cde1b` | UNREVIEWED | Introduce stakeholder/Current Work methodology, provenance validator, and DOC-0001 ticket/index |
 
 **Resolution Description**
 
