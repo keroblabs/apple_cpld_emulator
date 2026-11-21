@@ -8,13 +8,19 @@ void rtl_interconnect_capture( cpld_model_t *context )
     cpld_model_IOU_t *iou = context->iou;
     rtl_model_t *rtl = context->p_model;
 
-    // The default testbench exports upper address bits [16:12], not the
-    // entire address (unless FULL_MMU_ADDR is enabled at Verilator build).
+    // Reconstruct the lower bits for the 5-pin MMU. A slot IOSEL page uses
+    // only A7..A0. C6XX_N also decodes internal Apple ROM at C6xx, where the
+    // full CPU offset is needed.
 #ifdef FULL_MMU_ADDR
-    mmu->mem_address = rtl->MEM_ADDR_OUT & 0x1FFFF;
+    mmu->mem_address = rtl->MEM_ADDR_OUT;
 #else
-    mmu->mem_address = ( ( rtl->MEM_ADDR_OUT & 0x01F ) << 12 ) |
-                       ( mmu->cpu_address & 0x0FFF );
+    const bool slot_entry = mmu->cpu_rw &&
+                            ( !rtl->IOSEL_OUT_N || ( rtl->ROM_EN_N && !rtl->C6XX_N ) );
+    const bool address_valid = !rtl->RAM_EN_N || !rtl->ROM_EN_N || slot_entry ||
+                               ( mmu->cpu_rw && !rtl->IOSTB_N );
+    const uint32_t offset_mask = slot_entry ? 0x00FF : 0x0FFF;
+    mmu->mem_address = ( rtl->MEM_ADDR_OUT << 12 ) |
+                       ( address_valid ? ( mmu->cpu_address & offset_mask ) : 0 );
 #endif
 
     mmu->IOSEL_N = rtl->IOSEL_OUT_N;

@@ -23,7 +23,6 @@ MMU_slot_ctrl U_MMU_slot_ctrl (
     .PHI_0          (PHI_0),
     .RESET          (RESET),
     .IOSEL_INT      (IOSEL_INT),
-    .IOSTB_INT      (IOSTB_INT),
     .CFFF_INT       (CFFF_INT),
     .SW_SLOTXROM    (SW_SLOTXROM),
     .SW_SLOT3ROM    (SW_SLOT3ROM),

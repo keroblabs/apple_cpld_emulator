@@ -1,5 +1,4 @@
 #include "board.h"
-#include "apple2rom.h"
 
 #include "rtl_cpu_65816.h"
 #include "rtl_video.h"

@@ -6,7 +6,9 @@
 
 **Description**
 
-Formalise the physical division of labour: STM32 acts as SPI master for the CPLD IOU, and hosts RTC and serial flash; CPLDs retain MMU/IOU ROM-select and address generation. Define how synchronous CPU ROM reads are actually serviced when ROM images reside in serial flash.
+Formalise SPI master, RTC and serial flash ownership for the STM32. Define
+how the CPLD selects and addresses the separate DIP32 ROM for synchronous
+CPU reads.
 
 **Details**
 
@@ -19,7 +21,7 @@ Formalise the physical division of labour: STM32 acts as SPI master for the CPLD
 ### Existing evidence, assumptions and related source
 
 - The current emulation drives the Verilog SPI slave from `cpld/rtl_spi_slave.cpp`; that C++ transport mirrors an eventual STM32 SPI-master role, not a new SPI-master RTL block.
-- STM32-side SPI flash stores the firmware/image, but serial flash is not automatically a byte-wide, zero-wait-state device on the Apple CPU data bus.
+- STM32-side serial flash and the directly accessed DIP32 CPU ROM have separate storage and access timing.
 - `ROM_EN_N` and `MEM_ADDR_OUT` can identify a requested ROM byte; data return timing and any buffer/SRAM/cache/parallel bus interface must be explicit.
 
 **Notes**
@@ -28,6 +30,7 @@ Formalise the physical division of labour: STM32 acts as SPI master for the CPLD
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
+- **2026-11-21 — ROM map reconciliation:** With the 5-bit MMU address interface, card IOSEL uses CPU A7–A0 with physical A10–A8 cleared. Verify the physical low-address selection and the ROM/card enable policy against rev 3, including `C6XX_N` and DIP32 chip capacity.
 
 **Proposed Change**
 
@@ -38,7 +41,7 @@ The hardware topology should place the DIP32 ROM on the `MEM_ADDR_OUT` / `ROM_EN
 **Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
 1. Document a hardware block diagram and the exact direction/voltage/timing/ownership of STM32↔CPLD SPI control, RTC and flash, CPU memory bus, ROM_EN_N, MEM_ADDR_OUT and DATA bus.
-2. Compare feasible ROM serving approaches (e.g. direct parallel ROM/SRAM mapped to CPLD address outputs, SRAM shadow preloaded from serial flash, or STM32 parallel read service with demonstrably acceptable latency). Select one by measured/derived CPU-cycle requirements and hardware pins.
+2. Verify that the DIP32 bus, address selection and chip-enable wiring meet the CPU-cycle timing and documented physical ROM map.
 3. Keep optional physical slot6 drive-controller C6XX_N signal and confirm no bus contention; no new CPLD-side SPI master.
 4. Define what can be simulated now versus deferred to real STM32 firmware and hardware validation; reserve pin connections and level shifting for later.
 

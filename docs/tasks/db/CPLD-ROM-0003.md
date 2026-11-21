@@ -1,60 +1,48 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `REVIEW`  
+**Status:** `IN_PROGRESS`\
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
 
-Provide an emulated flash/ROM address source for selected slot firmware so CPU fetches come from the MMU's translated ROM signals, rather than slot-specific software exceptions. The existing 64 KiB ROM array and low-16-bit masking need review against the final map.
+Serve the original Apple ROM and separately built card ROMs from one
+256 KiB array. Load Apple firmware at its original offsets and provide an
+API that copies a raw 4 KiB binary into the requested slot.
 
 **Details**
 
 - Kind: TASK
 - Category: `CPLD-ROM`
 - Milestone: M1 — ROM mapping
-- Branch baseline: `rtl-rework`, inspected 2026-11-20; no implementation implied by this ticket
-- Dependencies: [`CPLD-ROM-0001`](CPLD-ROM-0001.md), [`CPLD-ROM-0002`](CPLD-ROM-0002.md)
+- Branch baseline: `mmu-rom-analysis` at `ffb534d`
+- Dependencies: [CPLD-ROM-0001](CPLD-ROM-0001.md), [CPLD-ROM-0002](CPLD-ROM-0002.md)
 
-### Existing evidence, assumptions and related source
+`memory_controller_init()` clears the backing and copies the original 32 KiB
+Apple image to `0x08000`. The MMU selects the original bytes for
+system ROM at `$D000–$FFFF` and for internal Cx reads. The slot windows
+start empty. `memory_controller_load_slot_rom(slot, bytes, length)` copies
+one 4096-byte binary verbatim to `slot × 0x1000` after initialization
+and before CPU execution. IOSEL is at file offset `$000` and IOSTB is at
+`$800`. Valid repeat loads replace the entire slot. Invalid input leaves
+the array intact. [ROM map](../../rom-memory-map.md)
 
-- `emulator/onboard/memory_controller.c` currently uses `static uint8_t rom_memory[ROM_SIZE * 2]`, loads Apple firmware at offset 32 KiB, and reads `rom_memory[cpld->MMU.mem_address & 0x0FFFF]` whenever ROM_EN_N is asserted.
-- `cpld/rtl_interconnect.cpp` reconstructs MEM_ADDR_OUT physical address from high outputs and CPU lower address bits in the default Verilator configuration.
-- No dedicated packaged slot7 ROM image or per-slot expansion flash map exists in the inspected tree.
+Normal board reads use the address sampled from `MEM_ADDR_OUT`, with
+`ROM_EN_N` for the Apple ROM and IOSEL, C6XX or IOSTB for an external slot
+in emulator mode. The shared backing traces the original CPU address,
+physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 
+### Review findings and current evidence
 
-### Independent review — 2026-11-20 (changes requested)
-
-The following findings are from inspection of the pushed `mmu-rom-analysis` sources and tests, not independent execution of Verilator or the full emulator. They extend the developer's review evidence without deleting its history.
-
-| Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
-| --- | --- | --- | --- | --- |
-| ROM3-R1 | ACCEPTANCE GAP | `rom_backing_install()` permits manual array overlays, but no `.romimg` loader/packer, manifest parser, or board-startup installation of slot7 firmware is implemented. The unit test calls the backing API directly. | Implement or clearly split the specified image-packing/loading task, connect an actual image/fixture to board startup through a documented loading route, and test slot7 ROM bytes as seen by CPU requests through `ROM_EN_N`/`MEM_ADDR_OUT`. | RESOLVED — `rom_backing_load_image()` parses the `*.romimg` format with validation; `memory_controller_load_rom_image()` is the documented board-startup route. `test_rom_backing.c` test 7 loads a built image; test 8 reads the exact physical addresses the MMU emits for $C700/$C7FF/$C800 (RTL-verified mapping). |
-| ROM3-R2 | UNVERIFIED TEST CLAIM | Ticket checks 'unmodified baseline Apple ROM still boots', but evidence only describes a clean CMake build and a standalone backing unit test. No runtime boot log, screen observation or full combined IOU/MMU test is supplied. | Run and log real boot on the branch, and a combined RTL→memory-controller ROM fetch test including C700, C800, cross-slot and CFFF; do not equate build success with runtime verification. | VERIFIED (OWNER, 2026-11-21) — emulator runs; Applesoft `PR#3` then `PR#0` works; developer's tests cover representative mapping. Slot-7 ProDOS boot is a separate future ticket. |
-| ROM3-R3 | ERROR VISIBILITY | `rom_backing_read()` can report out-of-bounds through its pointer, but the actual memory-controller path uses `rom_backing_read_traced()` which explicitly discards `oob` without reporting it; `idle_fill` silently stands in for the invalid ROM byte. | Make real ROM-path out-of-range read observable via trace/status/assertion or a documented error hook. Unit test must exercise the actual traced path when physical address exceeds 0xFFFF. | RESOLVED — the trace callback now carries an `out_of_bounds` flag, `rom_backing_read_traced()` increments `rom_backing_oob_count()`, and `test_rom_backing.c` test 6 exercises the actual traced path with phys > 0xFFFF (flag set, idle returned, count incremented). |
-| ROM3-R4 | MAP CONTRACT / INPUT CHECK | `rom_backing_install` only checks global 64 KiB bounds; it accepts installation into unrelated system ROM ranges or overlapping slot windows, although the proposed ROM packer requires segment/type/window validation. | Enforce logical-window/overlap validation at the image installer/packer layer, or narrow the public API to a trusted low-level primitive and test rejecting malformed manifests before modifying the ROM image. | RESOLVED — `rom_backing_install_region(kind, slot, ...)` enforces per-slot 4 KiB geometry (entry ≤256 B in first 2 KiB, expansion ≤2 KiB in second 2 KiB, slot 1–7), and a 256-byte-page occupancy map rejects overlaps (incl. system region). `test_rom_backing.c` test 4 rejects oversize, bad slot, overlap and system-range installs; the loader rejects malformed images. |
-
-**Acceptance assessment:** Standalone unit test passes as reported by developer; full ticket acceptance must remain unchecked pending image integration and runtime/RTL evidence.
-
-**Rework assessment (2026-11-21):** `rom_backing` reworked for the 4 KiB-per-slot
-layout with window/overlap validation (`rom_backing_install_region`), a
-`*.romimg` loader (`rom_backing_load_image`), a documented board-startup route
-(`memory_controller_load_rom_image`), OOB visibility on the traced path, and
-baseline migration preserving Apple-visible bytes. Unit test expanded to 45
-checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
-
-### Independent re-review — 2026-11-21 (4 KiB/slot image backing)
-
-**Confirmed by source review:** `memory_controller_init()` copies the existing Apple II image's `$Cn00–$CnFF` bytes into each slot's entry at `(n<<12)|(n<<8)`, including original `$C600–$C6FF` into `0x6600–0x66FF`, and replicates the `$C800–$CFFF` baseline at each slot's `+0x800`. It reads ROM only from `ROM_EN_N` and `MEM_ADDR_OUT`. The owner manually verified emulator operation and Applesoft `PR#3` / `PR#0`: **runtime verification done** (owner-reported, not independently reproduced).
-
-| Finding ID | Classification | Evidence | Required action / acceptance | State |
-| --- | --- | --- | --- | --- |
-| ROM3-R5 | SYSTEM ENTRY UNLOADABLE | `rom_backing_init(apple_rom_bin, ..., 0x8000, ...)` marks system pages occupied. `rom_backing_load_image()` dispatches a SYSTEM entry to `rom_backing_install_region`, whose `range_is_free` rejects all pre-populated pages. Consequently the documented three-entry image containing SYSTEM cannot load via `memory_controller_load_rom_image()`. | Define and implement explicit trusted SYSTEM replacement or preloading policy, or remove SYSTEM from supported packed images; test the real board-startup route with a SYSTEM-containing image. | OPEN |
-| ROM3-R6 | INCOMPLETE IMAGE VALIDATION | `rom_backing_load_image` checks magic, table size, payload file end and target region overlap; it **does not** check `version`, declared Apple base, nonzero CRC, or reject payload offsets within the header/table. These fields are specified in `docs/rom-memory-map.md`. | Validate all normative header fields and reject overlapping payload/table/file regions before copying. Add malformed-version, bad-CRC, payload-before-table and mismatched-address negative tests. | OPEN |
-| ROM3-R7 | PARTIAL MUTATION ON ERROR | The loader installs entries sequentially. A later invalid entry returns a negative code after earlier entries have already overwritten `rom_space` and marked occupancy; retrying a corrected image may then fail. | Two-pass validation and preflight of all regions/overlaps, then commit all installs (or rollback on error). Test failure after the first valid entry and successful retry. | OPEN |
-| ROM3-R8 | PACKING / INTEGRATION LIMIT | `rom_backing_load_image()` exists, but no standalone manifest-to-`*.romimg` packer or automatic startup image selection is in the changed tree. The unit test mirrors the MMU formula rather than invoking the combined Verilator→memory-controller path. | Either implement the minimal format generator and startup fixture in this ticket, or explicitly defer them into the firmware/ROM integration ticket without claiming a complete packaging/CPU-fetch test. | OPEN |
-
-**Verification disposition:** the previous ROM3-R2 runtime blocker is closed by the owner's reported real emulator run and `PR#3/PR#0` test. That is not a ProDOS slot-7 hard-disk boot test. ROM3-R1/R3/R4 improvements are present; ROM3-R5..R8 remain code/format readiness issues.
+| Finding | Evidence for re-review |
+| --- | --- |
+| ROM3-R1, CPU-visible startup loading | The combined test initializes the board's memory controller, loads raw slot-6 and slot-7 fixtures through the public API and reads their bytes through the actual Verilator scheduler and controller. |
+| ROM3-R2, real startup and integration | The combined model checks cross-slot selection and the `$CFFF` byte and release. The full emulator reached the Apple IIe prompt and executed the slot-6 disk bootstrap with a raw fixture. |
+| ROM3-R3, bounds visibility | The backing bounds check uses `0x40000`. A bus-test injection at that address through `memory_controller_access()` returns zero, raises the trace flag and increments the count. An RTL-generated address is at most 17 bits. |
+| ROM3-R4, input validation and isolation | The loader validates slots 1–7, a non-null pointer and exact 4096-byte length before one copy. The C tests cover short, long, overflowing and invalid-slot inputs, repeat loads and system/neighbor byte isolation. |
+| ROM3-R5 and ROM3-R6, system entry and header validation | The raw slot API replaces the tagged container. The complete flat file will carry the Apple bytes at their physical offsets. Startup validation will cover the exact file length and complete read. |
+| ROM3-R7, partial mutation | The slot API validates before copying. The new flat-file startup must validate the whole input before changing the shared backing. |
+| ROM3-R8, packaging and integration | The real bus test covers the per-slot development API. Direct whole-image startup and fixture regression belong here. Deterministic release composition and chip parity remain in CPLD-ROM-0004. |
 
 **Notes**
 
@@ -76,51 +64,43 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 
 - **2026-11-21 — Owner Manual Verification:** Owner reports the emulator runs successfully and that Apple II Applesoft `PR#3` followed by `PR#0` works with the revised 4 KiB slot ROM arrangement. Record as **VERIFIED (OWNER)** for emulator runtime and slot-3/slot-0 transition; this does not imply an IOMEM hard-disk or ProDOS slot7 boot test.
 - **2026-11-21 — Independent Re-review:** The producer/consumer physical ROM path is coherent and prior OOB visibility problems are fixed. Owner confirmed the emulator and PR#3/PR#0 work; this resolves the previous runtime-verification gap. Four separate packed-image correctness/completeness findings remain.
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` on owner direction to load the Apple image and raw 4 KiB slot binaries into a single 256 KiB array. The current 64 KiB backing, Cx ROM replication and packed-image loader are the baseline under rework.
+- **2026-11-21 — Discovery:** The baseline unit test passes 45 checks. Its integration assertions reproduce expected hardware addresses in C. Verification will drive the combined IOU/MMU model through the production scheduler and memory controller and exercise Apple startup with the original ROM bytes.
+- **2026-11-21 — Implementation:** `rom_backing.c` and `rom_backing.h` replace the tagged loader, region overlays and synthetic Cx copies with one 256 KiB backing and a fixed-layout raw slot copy. `memory_controller.c` and `memory_controller.h` expose the slot API and serve Apple and card ROM from captured MMU addresses. The board loads the existing Apple image once at startup.
+- **2026-11-21 — Verification:** `bash emulator/onboard/verification/run_tests.sh` passes 39 backing checks and 18,464 combined `IOU_MMU_tb` bus checks per variant (Verilator 5.045, GCC 15.2.1). The bus test compares 16,128 original Apple ROM bytes at `$C100–$FFFF` with the embedded image, in addition to slot dumps, cross-slot/CFFF tests, disk I/O decode and a real language-card switch sequence.
+- **2026-11-21 — Runtime verification:** Regenerated the default combined RTL model and built the desktop emulator with CMake 3.31.6 on Fedora 42 (GCC 15.2.1, SDL 2.33.0). Captured the SDL software-rendered framebuffer using the dummy video driver. With the original Apple image and all card slots empty, both the baseline and the reworked emulator displayed `Apple //e` and the Applesoft `]` prompt within five seconds.
+- **2026-11-21 — Disk II verification:** A temporary startup probe put the project's 256 `disc_rom_access` bytes at offset zero of a 4096-byte slot-6 file buffer and loaded it through `memory_controller_load_slot_rom`. With a scratch copy of `solo-flight.dsk`, the CPU fetched the bootstrap at `$C600`, loaded all 256 sector-zero bytes into `$0800–$08FF` byte for byte, then fetched its first instruction at `$0801` from the loaded sector.
+- **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` after combined bus, Apple ROM startup and Disk II bootstrap verification.
+- **2026-11-21 — Merge decision:** Preserved the single 256 KiB backing, the raw slot API, and the combined regression from `174966e`. The owner runtime report in `2cdcba6` applies to the older development setup. The tagged-format findings ROM3-R5 through ROM3-R7 are superseded for slot loads. The required whole-image startup and raw-mode tests from `22285ea` remain in scope here. Release image composition and physical readback remain in CPLD-ROM-0004.
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` to implement direct startup from a flat raw ROM while retaining the development slot API.
 
 **Proposed Change**
 
-### Mandatory DIP32 flash-image integration
+Supply the shared backing, direct slot-load API and phase-sampled access tests.
+Use raw firmware bytes as specified in [CPLD-ROM-0002](CPLD-ROM-0002.md).
+Add a raw-file startup mode that uses the supplied bytes as the sole ROM
+content and rejects later slot copies in that mode.
 
-Add a raw-flash load mode that seeds the ROM backing array exclusively from the supplied image, not from `apple_rom_bin`, slot-entry copying, expansion replication or later overlays. Read every byte through the normal MMU `ROM_EN_N` + `MEM_ADDR_OUT` path, assert the expected file length and verify byte-for-byte determinism. Raw image composition and complete physical flash acceptance are tracked in ROM-0004.
-
-**Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
-
-1. Make ROM data selection depend on ROM_EN_N + decoded physical MEM_ADDR_OUT, not direct CPU Cx address shortcuts. Respect the existing system ROM and RAM choices.
-2. Implement image loading/packing for slot7 and other configured slots using the reviewed map; ensure physical ROM capacity, bank selection, bounds and ROM holes are explicit, with no silent wrapping by `& 0xffff`.
-3. Add emulator-visible traces for CPU address, physical ROM address, ROM_EN_N and returned byte, and unit tests for the C700 and C800 windows.
-4. Do not break existing Apple system ROM boot, video, RAM or disk slot6 paths. Keep loading policy compatible with future STM32 ROM access strategy.
-
-### Acceptance criteria and evidence to record
-
-- [x] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 3, 5, 8).
-- [x] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (test 6 OOB on traced path; test 8 CFFF release to slot 0; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001` test 4).
-- [x] Baseline Apple emulator operates after ROM remapping; owner manually verified the emulator and Applesoft `PR#3` / `PR#0` on 2026-11-21. Developer reports MMU regression tests passed in both builds. This does **not** imply ProDOS slot-7 boot or hardware verification.
-
-### Single-image acceptance gate (added 2026-11-21)
-
-- [ ] The exact single programmer-ready image boots in raw mode and passes repeated `PR#3`/`PR#0` and per-slot ROM regression without runtime overlays.
+- [x] A synthetic 4 KiB slot-7 binary reads byte for byte at `$C700–$C7FF` and `$C800–$CFFF`.
+- [x] Cross-slot access, CFFF release, disabled ROM writes, invalid inputs and traced bounds behavior pass.
+- [x] Full emulator reaches the Apple ROM prompt with the unmodified image and empty slot windows.
+- [ ] A complete raw ROM file boots and provides byte-exact ROM reads through the MMU. Repeat `PR#3`/`PR#0` and the Disk II bootstrap with raw startup fixtures.
+- [ ] Test the actual programmer image after composition and DIP32 part confirmation. [CPLD-ROM-0004](CPLD-ROM-0004.md)
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `f77b260` | `SUPERSEDED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
-| `mmu-rom-analysis` | `3c4468c` | `CHANGES_REQUESTED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
+| `mmu-rom-analysis` | `3c4468c` | `SUPERSEDED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
+| `mmu-rom-analysis` | `2cdcba6` | `CHANGES_REQUESTED` | Independent re-review of `3c4468c`, including ROM3-R5 through ROM3-R8 |
+| `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Add the same-file raw startup acceptance gate |
+| `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
+| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
 
 **Resolution Description**
 
-Awaiting owner review. ROM reads are now served by `rom_backing` from the MMU
-physical address with explicit bounds and an optional trace hook; overlays
-(slot entry/expansion) are bounds-checked. Verified by `test_rom_backing.c`
-(24 checks, 0 failures) and a clean full-emulator rebuild. The default boot
-path is unchanged (no overlay installed by default), preserving the Apple
-system ROM, video, RAM and slot-6 paths.
-
-**Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.
-
-**Rework disposition (2026-11-21):** 4 KiB-per-slot `rom_backing` with validated
-installs, a `*.romimg` loader, a documented startup route, OOB visibility and
-baseline migration. ROM3-R1/R3/R4 resolved; ROM3-R2 partially met (Apple-visible
-bytes preserved by construction, integration fetch asserted, on-screen boot
-remains VERIFICATION_REQUIRED). Prior commit `f77b260` superseded. Awaiting owner
-re-review/acceptance.
+The 256 KiB array and raw slot-load API passed backing, combined bus and
+runtime verification. Direct whole-image startup is in progress. Slot-7
+ProDOS boot and IOMEM disk transfers depend on the firmware and integration work in
+[CPLD-TEST-0001](CPLD-TEST-0001.md).

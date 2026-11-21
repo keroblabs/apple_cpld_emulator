@@ -29,17 +29,20 @@ Create an Apple 6502/65C816-compatible slot7 firmware skeleton with the ProDOS b
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
 - **2026-11-20 — Scope:** The STM32 owns the SPI master, RTC and serial flash; no additional CPLD-side SPI master is planned. Preserve slot6 compatibility and respect the existing Apple C0Fx mailbox.
+- **2026-11-21 — ROM map reconciliation:** Rev 3 places slot 7 IOSEL at `0x07000–0x070FF` and IOSTB at `0x07800–0x07FFF`. The active slot firmware build emits one raw 4096-byte file, with IOSEL at file offset `0x000` and expansion at `0x800`. This supersedes the earlier `0x7700` entry offset.
 
 **Proposed Change**
 
 ### Mandatory DIP32 flash-image integration
 
-Generate the 256-byte IOSEL entry and the selected slot7 IOSTB expansion as reproducible inputs to the single flash-image builder (ROM-0004). Do not declare the slot7 ROM emulator-verified from a separately overlaid `*.romimg`; validate its bytes and ProDOS signature through raw-image mode.
+Build the 256-byte IOSEL entry and the slot-7 IOSTB expansion into a single
+raw 4096-byte slot input for ROM-0004. Verify its bytes and ProDOS signature
+with the emulator loading the complete programmer image directly.
 
 **Cross-ticket gate:** [`CPLD-ROM-0004`](CPLD-ROM-0004.md) and [single-image contract](../../rom-flash-image-contract.md).
 
 1. Write `docs/prodos-slot7-firmware.md` with bootstrap entry, ProDOS probe signature, `$C7FC–$C7FF` bytes, supported commands and advertised capability flags. Start with read-only capabilities if WRITE is not yet implemented; never advertise unsupported operations.
-2. Select an assembler/toolchain and define reproducible 256-byte slot ROM + optional C800 expansion image layout with deterministic fill/padding, linked to the ROM map.
+2. Select an assembler and produce the exact 4096-byte slot file, including deterministic fill and the entry/expansion offsets in the ROM map.
 3. Build a minimal ROM that ProDOS recognises at slot7 and can invoke for STATUS with a clearly controlled placeholder result; no IOMEM sector access is needed yet.
 4. Decide compatibility mode explicitly (ProDOS block device first; SmartPort only if separately justified). Specify interrupt, bank register, zero-page and software-switch preservation.
 
