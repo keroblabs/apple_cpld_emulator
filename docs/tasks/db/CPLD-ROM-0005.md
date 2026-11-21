@@ -168,6 +168,7 @@ Implement the narrowly scoped **128 KiB** ROM backing and single-image exporter 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `216b012` | `UNREVIEWED` | Start the flash retarget and record the approved baseline |
+| `mmu-rom-analysis` | `cf47ae7` | `UNREVIEWED` | Retarget the backing and export, verify MMU and desktop ROM reads, and revise the flash contract |
 
 **Resolution Description**
 

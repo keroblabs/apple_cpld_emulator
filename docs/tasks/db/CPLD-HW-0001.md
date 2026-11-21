@@ -161,6 +161,7 @@ especially on internal/card `$C6xx` transitions. The limits are from
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `mmu-rom-analysis` | `cf47ae7` | `UNREVIEWED` | Record SST39VF010-70 reference connections, timing and hardware verification gates |
 
 **Resolution Description**
 

@@ -96,6 +96,7 @@ chip readback. [Flash image contract](../../rom-flash-image-contract.md)
 | `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Emulator prerequisite for direct raw-file tests with the programmer image |
 | `mmu-rom-analysis` | `562ce53` | `APPROVED` | Record direct export of the compiled startup image |
 | `mmu-rom-analysis` | `8df4a4f` | `APPROVED` | Export the populated backing with `-w` and record byte parity and boot evidence |
+| `mmu-rom-analysis` | `cf47ae7` | `UNREVIEWED` | Apply the 128 KiB export and readback contract from CPLD-ROM-0005 |
 
 **Resolution Description**
 
