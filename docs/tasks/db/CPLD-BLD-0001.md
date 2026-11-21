@@ -37,7 +37,7 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 - [x] Mock fitter asserts `-d ATF1508ASV -p PLCC84 -s 15` for each target; real fitter report still pending.
 - [x] Mock tests verify unique output directories, nonzero propagation and preserved logs for Yosys and fitter errors.
 - [ ] User runs each real build on `devel` against `devel-rtl`; actual fit, timing, pins, warnings and security/JTAG settings are reviewed under `CPLD-HW-0004`.
-- [ ] Owner reviews the implementation before marking RESOLVED. No push or merge by implementer.
+- [ ] Owner reviews the implementation before marking RESOLVED. The `rtl-compile-work` branch is updated for the owner-requested `git pull`; no merge is performed.
 
 **Implementation and verification log**
 
@@ -45,12 +45,18 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 - **2026-11-21 — Tests (isolated harness):** `bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build.sh` completed successfully. `bash tests/test_remote_build.sh` passed **8/8 assertions groups**: MMU correct source/ASV parameters and stale-EDIF exclusion; IOU independent source and `IOU_COMPLETE`; MMU optional `FULL_MMU_ADDR`; `all` output separation; invalid inputs; SSH failure; Yosys failure with captured log; fitter failure with captured EDIF/log. No real Yosys, Wine, remote VM, CPLD fit or physical timing measurements were executed in this isolated harness.
 - **2026-11-21 — Handoff:** Apply the unpushed local patch series to the owner's actual `devel` checkout. Then execute real `./scripts/build-cpld.sh all` and evaluate the resulting FIT and JED artefacts as evidence for `CPLD-HW-0004`. Maintain REVIEW until owner acceptance; do not claim physical CPLD readiness.
 
+- **2026-11-21 — Real MMU compile failure (owner on `devel`):** The first `./scripts/build-cpld.sh all` passed 8/8 mock checks but failed during MMU Yosys hierarchy resolution: `TTL_ls138_2` in `MMU_io` was absent from the transferred sources. Diagnostics were recovered under `build/rtl-cpld/MMU.bTyxHUAm/`. IOU fitting was not attempted in that run.
+- **2026-11-21 — Root cause and fix:** `rtl_MMU/MMU_io.v` depends on `TTL_ls138_2`, `TTL_ls259`, `IOU_exp16`, and optionally `IOU_toggle_d`, which are stored in `rtl_IOU/`. Updated the build-driver source manifest to include those four named helpers during MMU compilation only. Physical IOU top and SPI implementation remain excluded. No RTL changes.
+- **2026-11-21 — Regression and reproducibility:** `bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build.sh` passed and `bash tests/test_remote_build.sh` passed 10/10 mock groups in the isolated build workspace, including missing-dependency rejection and `SPK_IN_MMU` coverage. The tests were not executed on `devel` after the change; real MMU and IOU Yosys/fitter runs remain pending.
+- **2026-11-21 — Branch publication requested by owner:** Instead of applying local patch files, the owner explicitly requested committing the correction directly to `rtl-compile-work` to retrieve it by `git pull`. Code/test/docs commit `4a5c4ca` made from branch head `a7d7203`; this ticket-only commit records the handoff. No PR or merge.
+
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- |
 | `cpld-bld-0001-remote-rtl` | `7aa2d55` | UNREVIEWED | Ticket and index entry (local patch-series SHA; changes on application) |
 | `cpld-bld-0001-remote-rtl` | `33068f6` | UNREVIEWED | Remote build driver, isolated tests and operator documentation (local patch-series SHA; changes on application) |
+| `rtl-compile-work` | `4a5c4ca` | UNREVIEWED | MMU shared dependency transfer, 10-group regression suite, and documentation committed directly to requested branch |
 
 **Resolution Description**
 
