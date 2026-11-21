@@ -1,7 +1,7 @@
 # CPLD-ROM-0001 — Verify MMU slot ROM address generation and control signals
 
 **ID:** `CPLD-ROM-0001`  
-**Status:** `REVIEW`  
+**Status:** `IN_PROGRESS`\
 **Title:** Verify MMU slot ROM address generation and control signals
 
 **Description**
@@ -106,6 +106,8 @@ banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 - **2026-11-21 — Rework (owner directive):** Enforced 4 KiB-per-slot IO firmware ROM windows in `rtl_MMU/MMU_addr.v` — the `rom_enabled` branch now splits on `D_FXXX_INT`: system ROM stays raw, IO firmware ROM (IOSEL/IOSTB) uses `{ slot_index, ADDR[11:0] }` (first 2 KiB IOSEL, second 2 KiB IOSTB). The external-card path shares the same formula.
 - **2026-11-21 — Test:** Rewrote `tb_mmu_addr.cpp` to lock the 4 KiB mapping and close ROM1-R1/R2/R3: CFFF latch release now observable (test 4), IOSEL/IOSTB boundaries (2,3), cross-slot ownership (5), external polarities (6), C6XX_N bus-ownership (7), system ROM raw (9), RAM main/aux banking (10). Results: default 54/0, FULL 58/0 (Verilator 5.045).
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `ac11544` superseded by the rev-2 commit.
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` on owner direction to verify the address decode against the raw 4 KiB slot binary layout.
+- **2026-11-21 — Discovery:** The baseline Verilator regression passes 54 checks in the 5-bit build and 58 in the full build. The address within the first 2 KiB still includes the slot's CPU page bits, so it misses a raw binary's entry page at offset zero. The CFFF test checks the address of the following cycle. Reproduce the CFFF return address and distinguish the internal Apple Cx ROM from card ROM before changing the decoder.
 
 **Proposed Change**
 

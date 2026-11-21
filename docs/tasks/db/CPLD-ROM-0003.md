@@ -1,7 +1,7 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `REVIEW`  
+**Status:** `IN_PROGRESS`\
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
@@ -58,6 +58,8 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 - **2026-11-21 — Test:** Expanded `test_rom_backing.c` to 45 checks (0 failures): window geometry, validated install + rejections, `*.romimg` load (valid + malformed), OOB on the traced path, and integration reads against the RTL-verified MEM_ADDR_OUT mapping.
 - **2026-11-21 — Test:** Full emulator rebuilt clean; runs ~6 s headless (SDL dummy) without crashing. On-screen boot verification deferred (needs display).
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `f77b260` superseded.
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` on owner direction to load the Apple image and raw 4 KiB slot binaries into a single 256 KiB array. The current 64 KiB backing, Cx ROM replication and packed-image loader are the baseline under rework.
+- **2026-11-21 — Discovery:** The baseline unit test passes 45 checks. Its integration assertions reproduce expected hardware addresses in C. Verification will drive the combined IOU/MMU model through the production scheduler and memory controller and exercise Apple startup with the original ROM bytes.
 
 **Proposed Change**
 

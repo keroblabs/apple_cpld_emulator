@@ -1,7 +1,7 @@
 # CPLD-ROM-0002 — Specify slot ROM and expansion ROM flash layout
 
 **ID:** `CPLD-ROM-0002`  
-**Status:** `REVIEW`  
+**Status:** `IN_PROGRESS`\
 **Title:** Specify slot ROM and expansion ROM flash layout
 
 **Description**
@@ -53,6 +53,7 @@ executable loader in CPLD-ROM-0003).
 - **2026-11-20 — Independent Code Review:** Reviewed `docs/rom-memory-map.md` against current RTL and the approved ticket proposal. Image format cannot be implemented as written because the header/table and system ROM payload overlap at offset zero. Also found a 2047-byte C800–CFFE range error and a CFFF mapping ambiguity. Revision needed prior to accepting this as a locked flash layout.
 - **2026-11-21 — Rework:** Rewrote `docs/rom-memory-map.md` to rev 2. Added the per-slot 4 KiB window geometry (§2.1), corrected C800–CFFF sizing and CFFF semantics (§2.2), documented C6XX_N bus-ownership (§2.3), redefined the emulator physical ROM space and baseline migration (§3), and fixed the `*.romimg` format with a single `CPRM` magic, post-table payloads, a worked slot-7 example and per-slot flash partitions (§4). Grounded on the rev-2 CPLD-ROM-0001 verified mapping.
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `846dd38` superseded.
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` on owner direction. Specify a single 256 KiB emulator address space with the unmodified Apple image and one raw 4 KiB binary per slot. The entry page begins at file offset `$000` and expansion begins at `$800`.
 
 **Proposed Change**
 
