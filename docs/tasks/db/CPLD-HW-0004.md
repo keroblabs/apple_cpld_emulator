@@ -137,6 +137,7 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 | `rtl-compile-work` | *documentation handoff* | UNREVIEWED | Owner-reported independent MMU/IOU FIT summaries; exact documentation commit recorded in branch history |
 | `rtl-compile-work` | `2038fee` | UNREVIEWED | Record owner-approved MMU signal ownership, emulator sync, fitting acceptance tests and stakeholder provenance |
 | `rtl-compile-work` | `44d9253` | APPROVED | Move peripheral outputs to MMU; add output ownership, emulator capture and internal AN3 status regressions; source-level review passed 23/23 |
+| `rtl-compile-work` | `473d00d` | APPROVED | Record independent post-relocation FIT/PIN/TT3 acceptance, artifact hashes, 29/29 checks and RESOLVED disposition |
 
 **Resolution Description**
 

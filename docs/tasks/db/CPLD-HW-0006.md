@@ -42,6 +42,8 @@ Both MMU and IOU fit the ATF1508ASV-15 PLCC84, including the MMU's six relocated
 - **2026-11-21 — REVIEWER (GPT-6) — Discovery:** HW-0004 independently reviewed updated owner-uploaded MMU FIT/PIN/TT3 and IOU FIT/PIN/TT3; all 29 direct artifact assertions passed. The MMU uses 50/128 macrocells, 45/64 I/O; IOU 108/128 macrocells, 36/64 I/O. FIT reports only requested 15 ns grade and final fit success, not numeric clock setup/hold or path slack. HW-0004's RTL and resource-fitting result can be RESOLVED while physical timing remains explicitly OPEN here.
 - **2026-11-21 — REVIEWER (GPT-6) — Scope distinction:** No physical board/schematic, on-hardware measurement or numeric timing files were supplied. This is a new **hardware readiness** verification workstream; creating it does not imply that the existing RTL or successful fitting is defective.
 
+- **2026-11-21 — REVIEWER (GPT-6) — Ticket registration and verification:** HW-0006 opened by commit `5bd54de` on `rtl-compile-work` to preserve the outstanding numerical timing and PCB electrical checks after HW-0004 fitter sign-off. The owner-supplied FIT/PIN/TT3 artifact checks passed 29/29 (recorded in HW-0004). This new ticket contains acceptance criteria and future verification tasks; it has **no performed physical timing measurements** and must remain OPEN.
+
 **Proposed Change**
 
 Produce a physical sign-off package: device-specific timing budget and clock/control signal requirements, explicit IOU SPI and CPU clock-domain behaviour, bus transceiver/isolation truth table, preserved JTAG, and a frozen pin map matching actual fitted artifacts and board schematic. If a real violation is found, open a focused RTL/hardware correction under the appropriate ticket. Do not optimise or redesign functioning RTL speculatively.
@@ -59,6 +61,7 @@ Produce a physical sign-off package: device-specific timing budget and clock/con
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `rtl-compile-work` | `5bd54de` | UNREVIEWED | Register physical timing, pin-freeze and bus-isolation acceptance separate from HW-0004 |
 
 **Resolution Description**
 
