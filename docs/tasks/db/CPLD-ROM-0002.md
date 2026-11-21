@@ -90,6 +90,7 @@ and programming verification.
 | `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Specify the 256 KiB backing and each raw slot binary's file and memory offsets |
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile rev 3 offsets with the single-file release contract |
 | `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record the compiled inputs and start rev 4 |
+| `mmu-rom-analysis` | `8df4a4f` | `UNREVIEWED` | Document rev 4 and verify the compiled inputs at their target offsets |
 
 **Resolution Description**
 

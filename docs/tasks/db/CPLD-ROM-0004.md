@@ -77,6 +77,7 @@ programmer file. Verify the device capacity, high-line wiring and readback.
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Adopt the rev 3 physical byte offsets and keep final chip validation open |
 | `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Emulator prerequisite for direct raw-file tests with the programmer image |
 | `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record direct export of the compiled startup image |
+| `mmu-rom-analysis` | `8df4a4f` | `UNREVIEWED` | Export the populated backing with `-w` and record byte parity and boot evidence |
 
 **Resolution Description**
 

@@ -113,6 +113,7 @@ with the startup export from the same backing.
 | `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile the reviewer findings and carry forward raw-file startup |
 | `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Boot directly from a flat ROM file and verify raw device reads and desktop startup |
 | `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record the compiled ROM and export-only CLI scope |
+| `mmu-rom-analysis` | `8df4a4f` | `UNREVIEWED` | Load the compiled ROM arrays and verify both MMU builds and desktop startup |
 
 **Resolution Description**
 
