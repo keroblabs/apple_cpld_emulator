@@ -24,7 +24,7 @@ Review the current MMU address and enable equations before depending on ROM-back
 - `rtl_IOU_MMU_TB/IOU_MMU_tb.v`: test actual output pin semantics; C6XX_N is a dedicated output for an optional real slot-6 controller.
 - Known risk, not confirmed defect: default MEM_ADDR_OUT is only bits [16:12], and `FULL_MMU_ADDR` changes the HDL interface. The C++ adapter reconstructs lower 12 address bits in the default build.
 
-### Verified behaviour and truth table (2026-11-20)
+### Historical behaviour and truth table (2026-11-20; superseded by 4 KiB/slot mapping on 2026-11-21)
 
 Verified by Verilator regression `rtl_MMU/verification/tb_mmu_addr.cpp`
 (driven over real PHI_0 cycles, sampled while PHI_0 is high, matching the
@@ -92,6 +92,18 @@ expanded to 54/58 checks (both builds) and now covers the CFFF latch release,
 slot-end/boundary addresses, external IOSEL/IOSTB polarities, RAM soft-switch
 banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 
+### Independent re-review — 2026-11-21 (owner's 4 KiB/slot directive)
+
+**Architecture accepted in principle:** 8 physical 4 KiB windows, one per slot index (slot 0 reserved); 1–7 each get a first 2 KiB IOSEL area with the 256-byte entry at `(slot<<12)|(slot<<8)`, and a second 2 KiB IOSTB area at `(slot<<12)|0x800`. System ROM remains raw at D000–FFFF. The C6xx baseline migration and `C6XX_N` address decode are preserved. The owner manually verified emulator operation with Applesoft `PR#3` then `PR#0`.
+
+**Important:** the earlier section "Verified behaviour and truth table (2026-11-20)" records the superseded *raw-address* implementation; it is historical evidence and MUST NOT be followed for rev-2 firmware. The current RTL derives IO-firmware physical addresses from the selected slot.
+
+| Finding ID | Classification | Evidence | Required action / acceptance | State |
+| --- | --- | --- | --- | --- |
+| ROM1-R4 | VERIFY CFFF SAMPLING | `MMU_slot_ctrl.v` updates `slot_index_r=0` on **posedge PHI_0** for `CFFF_INT`; `MMU_addr.v` combinationally uses that updated index; `rtl_memory_bus.cpp` captures ROM address after the high phase. Consequently on the CFFF cycle the physical address appears to be **`0x0FFF` (slot 0)**, not selected slot 7's `0x7FFF`, despite `docs/rom-memory-map.md` §2.1 claiming the selected slot's last byte. Regression test 4 checks only the *following* C800 mapping, not the CFFF physical address. | Add a post-PHI_0 assertion on **CFFF itself** and determine required semantics: if CFFF must deliver selected slot's last byte, delay release until after the ROM sample; otherwise explicitly document CFFF as release-only with undefined/slot0 data. Preserve next-C800 release behaviour. | OPEN |
+
+The developer reports 54 default + 58 FULL tests passing; these results were not rerun in this environment. Runtime and `PR#3/PR#0` are verified by the **owner**. Rework needed only for the exact CFFF byte/phase contract; no reason to undo the per-slot layout.
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -106,6 +118,9 @@ banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 - **2026-11-21 — Rework (owner directive):** Enforced 4 KiB-per-slot IO firmware ROM windows in `rtl_MMU/MMU_addr.v` — the `rom_enabled` branch now splits on `D_FXXX_INT`: system ROM stays raw, IO firmware ROM (IOSEL/IOSTB) uses `{ slot_index, ADDR[11:0] }` (first 2 KiB IOSEL, second 2 KiB IOSTB). The external-card path shares the same formula.
 - **2026-11-21 — Test:** Rewrote `tb_mmu_addr.cpp` to lock the 4 KiB mapping and close ROM1-R1/R2/R3: CFFF latch release now observable (test 4), IOSEL/IOSTB boundaries (2,3), cross-slot ownership (5), external polarities (6), C6XX_N bus-ownership (7), system ROM raw (9), RAM main/aux banking (10). Results: default 54/0, FULL 58/0 (Verilator 5.045).
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `ac11544` superseded by the rev-2 commit.
+
+- **2026-11-21 — Owner Manual Verification:** Owner reports the emulator runs successfully and that Apple II Applesoft `PR#3` followed by `PR#0` works with the revised 4 KiB slot ROM arrangement. Record as **VERIFIED (OWNER)** for emulator runtime and slot-3/slot-0 transition; this does not imply an IOMEM hard-disk or ProDOS slot7 boot test.
+- **2026-11-21 — Independent Re-review:** 4 KiB slot translation matches the owner's directive; received manual runtime verification. Identified the unasserted CFFF byte address in the PHI_0 sampling phase; requested a narrow test and explicit decision rather than speculative RTL redesign.
 
 **Proposed Change**
 
@@ -124,7 +139,7 @@ banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `ac11544` | `SUPERSEDED` | MMU_addr truth-table regression + 17-bit literal width fix |
-| `mmu-rom-analysis` | `7e1df68` | `UNREVIEWED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
+| `mmu-rom-analysis` | `7e1df68` | `CHANGES_REQUESTED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
 
 **Resolution Description**
 

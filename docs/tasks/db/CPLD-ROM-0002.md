@@ -42,6 +42,18 @@ post-table payloads with worked example, corrected C800–CFFF sizes, CFFF
 semantics under the new mapping, explicit per-slot flash partitions, and an
 executable loader in CPLD-ROM-0003).
 
+### Independent re-review — 2026-11-21 (4 KiB per-slot specification)
+
+**Accepted design basis:** slot 1–7 each owns 4 KiB; IOSEL uses one 256-byte page inside the first 2 KiB, IOSTB uses the second 2 KiB; slot 6's Apple-visible C6xx contents migrate to 0x6600; system ROM stays at its original CPU address. The owner verified the emulator still runs and `PR#3` / `PR#0` function.
+
+| Finding ID | Classification | Evidence | Required action / acceptance | State |
+| --- | --- | --- | --- | --- |
+| ROM2-R4 | INCORRECT WORKED EXAMPLE | Section 4.1 says a **three-entry** table ends at `0x0037` and first payload begins at `0x0038`, but the example table lists payload offsets **`0x0028 / 0x8028 / 0x8128`** (all 16 bytes too early). | Correct example offsets to `0x0038 / 0x8038 / 0x8138` for its 0x8000/0x100/0x800 payload lengths. Add a three-entry pack/load regression. | OPEN |
+| ROM2-R5 | CFFF DATA CONTRACT | Section 2.1 claims the CFFF access returns the previously selected slot's `+0xFFF` byte; source-level PHI_0 sequencing appears to select slot 0 **during** that access. | Resolve ROM1-R4 and update this statement using a CFFF-address waveform/assertion; document when the release takes effect. | OPEN |
+| ROM2-R6 | FORMAT/LOADER CONTRACT | Section 4 defines version 1, a required payload offset after the entry table, and IEEE CRC when nonzero; `rom_backing_load_image` does not validate version, header/table offset ordering or nonzero CRC. Section 4 describes system-ROM entries but the current loader cannot install one after startup's preloaded ROM occupancy. | Align prose and code on validated fields, SYSTEM replacement policy, and atomic error handling; add negative tests before freezing the ROM image format. | OPEN |
+
+These concerns do not invalidate the per-slot geometry. The documentation/format contract is not yet stable for a hardware flash image packer.
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -54,6 +66,9 @@ executable loader in CPLD-ROM-0003).
 - **2026-11-21 — Rework:** Rewrote `docs/rom-memory-map.md` to rev 2. Added the per-slot 4 KiB window geometry (§2.1), corrected C800–CFFF sizing and CFFF semantics (§2.2), documented C6XX_N bus-ownership (§2.3), redefined the emulator physical ROM space and baseline migration (§3), and fixed the `*.romimg` format with a single `CPRM` magic, post-table payloads, a worked slot-7 example and per-slot flash partitions (§4). Grounded on the rev-2 CPLD-ROM-0001 verified mapping.
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `846dd38` superseded.
 
+- **2026-11-21 — Owner Manual Verification:** Owner reports the emulator runs successfully and that Apple II Applesoft `PR#3` followed by `PR#0` works with the revised 4 KiB slot ROM arrangement. Record as **VERIFIED (OWNER)** for emulator runtime and slot-3/slot-0 transition; this does not imply an IOMEM hard-disk or ProDOS slot7 boot test.
+- **2026-11-21 — Independent Re-review:** Per-slot mapping and flash partition design align with the directive, but the three-entry format example contains overlapping offsets; CFFF's claimed data byte is not asserted; format guarantees exceed what the loader actually validates. Requested targeted spec fixes.
+
 **Proposed Change**
 
 1. Create `docs/rom-memory-map.md` giving **for each slot 1–7**: Apple address region, how the slot is selected, CPU IOSEL/IOSTB range, MEM_ADDR_OUT representation, ROM_EN_N behaviour, physical flash partition/offset and image filename/build section.
@@ -65,14 +80,14 @@ executable loader in CPLD-ROM-0003).
 
 - [x] Document has all seven per-slot Cn00–CnFF sections and C800–CFFF selection and physical ROM image offsets, including example slot7 location (`docs/rom-memory-map.md` rev 2 §2, §2.1, §3, §4.1).
 - [x] No two active ROM windows alias the same unintended physical bytes; CFFF and slot-selection transitions are defined and tested against ROM-0001 evidence (§1, §2.1; `tb_mmu_addr.cpp` tests 3–5).
-- [x] Image layout can be implemented in the emulator and built for STM32-managed flash without requiring a change to the Apple-visible ROM contents (§3 baseline migration; §4 loader-enforced format; emulator smoke-run clean).
+- [ ] The 4 KiB-per-slot logical layout is implemented; the packed format remains pending review of ROM2-R4/R6 (worked offsets, version/CRC/table bounds and SYSTEM policy). Emulator smoke-run/`PR#3`/`PR#0` verified by owner.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `846dd38` | `SUPERSEDED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
-| `mmu-rom-analysis` | `26f6c06` | `UNREVIEWED` | rom-memory-map.md rev 2: 4 KiB/slot windows, format/CFFF fixes |
+| `mmu-rom-analysis` | `26f6c06` | `CHANGES_REQUESTED` | rom-memory-map.md rev 2: 4 KiB/slot windows, format/CFFF fixes |
 
 **Resolution Description**
 
