@@ -1,7 +1,7 @@
 # CPLD-BLD-0001 — Remote ATF1508ASV build driver for MMU and IOU
 
 **ID:** `CPLD-BLD-0001`  
-**Status:** `IN_PROGRESS`  
+**Status:** `REVIEW`  
 **Title:** Remote ATF1508ASV build driver for MMU and IOU
 
 **Description**
@@ -32,17 +32,25 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 
 **Acceptance criteria / required evidence**
 
-- [ ] Shell syntax valid, mock tests pass for `mmu`, `iou`, `all`, rejected arguments, failed SSH and failed fitter.
-- [ ] MMU and IOU synthesized separately from only their respective current `.v` sources, not the combined testbench or historical EDIF/JED.
-- [ ] Exact intended fitter part, package and speed supplied; no old AS default.
-- [ ] Artifacts/logs have independent, non-overwriting directories; build failures return nonzero and logs are still transferred when possible.
+- [x] Shell syntax valid, mock tests pass for `mmu`, `iou`, `all`, rejected arguments, failed SSH and failed fitter.
+- [x] Test harness confirms separate MMU/IOU top-level source transfer and no historical EDIF/JED or testbench transfer; **real design builds pending**.
+- [x] Mock fitter asserts `-d ATF1508ASV -p PLCC84 -s 15` for each target; real fitter report still pending.
+- [x] Mock tests verify unique output directories, nonzero propagation and preserved logs for Yosys and fitter errors.
 - [ ] User runs each real build on `devel` against `devel-rtl`; actual fit, timing, pins, warnings and security/JTAG settings are reviewed under `CPLD-HW-0004`.
 - [ ] Owner reviews the implementation before marking RESOLVED. No push or merge by implementer.
+
+**Implementation and verification log**
+
+- **2026-11-21 — Implementation:** New tracked `scripts/build-cpld.sh` chooses top-level MMU/IOU independently, copies only `.v` from the matching directory, and runs new `scripts/remote-fit-cpld.sh` over SSH. Yosys reads all module files and maps EDIF through the verified `atf15xx_yosys` primitive flow. Independent local outputs retain logs and source/toolchain metadata; combined Verilator flow unchanged.
+- **2026-11-21 — Tests (isolated harness):** `bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build.sh` completed successfully. `bash tests/test_remote_build.sh` passed **8/8 assertions groups**: MMU correct source/ASV parameters and stale-EDIF exclusion; IOU independent source and `IOU_COMPLETE`; MMU optional `FULL_MMU_ADDR`; `all` output separation; invalid inputs; SSH failure; Yosys failure with captured log; fitter failure with captured EDIF/log. No real Yosys, Wine, remote VM, CPLD fit or physical timing measurements were executed in this isolated harness.
+- **2026-11-21 — Handoff:** Apply the unpushed local patch series to the owner's actual `devel` checkout. Then execute real `./scripts/build-cpld.sh all` and evaluate the resulting FIT and JED artefacts as evidence for `CPLD-HW-0004`. Maintain REVIEW until owner acceptance; do not claim physical CPLD readiness.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
-| --- | --- | --- | --- |
+| --- | --- | --- |
+| `cpld-bld-0001-remote-rtl` | `7aa2d55` | UNREVIEWED | Ticket and index entry (local patch-series SHA; changes on application) |
+| `cpld-bld-0001-remote-rtl` | `33068f6` | UNREVIEWED | Remote build driver, isolated tests and operator documentation (local patch-series SHA; changes on application) |
 
 **Resolution Description**
 
