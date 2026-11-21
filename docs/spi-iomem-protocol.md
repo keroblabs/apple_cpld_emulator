@@ -133,12 +133,22 @@ peripheral mode:
 
 The emulator master uses four scheduler ticks per SCK half-period (eight per
 complete SCK period), drives MOSI throughout each low/high pair, and captures
-MISO at the end of the low phase. That is the tested digital interval; the
-scheduler has no physical time unit, so it does not establish a maximum SCK in
-hertz, electrical setup/hold time, or a hardware timing margin. The SPI pending
-controls are sampled by PHI_0-clocked mailbox logic; the integrated Verilator
-regression interleaves those clocks, while physical clock-domain timing remains
-unmeasured.
+MISO at the end of the low phase. The pending/acknowledgement phase regression
+adds a conservative digital operating point: PHI_0 at 1 MHz and SCK at 125 kHz,
+with a 50% SCK duty cycle and four PHI_0 periods per SCK half-period. A selected
+pending control is asserted from the thirteenth data rising edge through the
+trailing rising edge, one complete SCK period (8 microseconds, or eight PHI_0
+periods). CPU acknowledgement inputs are held through three PHI_0 rising edges.
+The Verilator test sweeps 1,000 relative start phases in 1 ns increments across
+one PHI_0 period and checks selector 0 write-pending clear, selector 1
+read-pending set plus CPU acknowledgement, and selector 2 keyboard-pending set
+plus CPU acknowledgement. Results and a near-worst-phase waveform are in
+`rtl_IOU/verification/spi_phase_handshake.vcd`.
+
+This establishes logical capture for that conservative simulated clock ratio;
+it does not establish an arbitrary maximum SCK, electrical setup/hold time,
+metastability margin, or hardware clock-domain safety. Any faster operating
+point needs its own phase sweep and a defined pending-control hold interval.
 
 ### 4.2 Software queue semantics
 
