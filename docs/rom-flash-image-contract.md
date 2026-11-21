@@ -2,7 +2,7 @@
 
 **Status:** Owner release requirement, aligned with ROM map rev 5 on 2026-11-21. Physical verification is pending.
 
-**Tickets:** [Image export and parity](tasks/db/CPLD-ROM-0004.md), [128 KiB retarget](tasks/db/CPLD-ROM-0005.md), [hardware ROM](tasks/db/CPLD-HW-0001.md)
+**Tickets:** [Image export and parity](tasks/db/CPLD-ROM-0004.md), [128 KiB retarget](tasks/db/CPLD-ROM-0005.md), [approved hardware ownership/part decision](tasks/db/CPLD-HW-0001.md), [separate memory strobes](tasks/db/CPLD-HW-0002.md).
 
 ## 1. Release file
 
@@ -47,17 +47,21 @@ driver, including when an optional external controller owns slot 6.
 
 ## 3. Hardware inputs to confirm
 
-The SST39VF010-70 is 128K × 8, with A0–A16 and a 70 ns address access
+The selected **SST39VF010-70-4I-NHE** (industrial PLCC32) is 128K × 8, with A0–A16 and a 70 ns address access
 rating. Strap flash A16 to VSS on the target. RAM bank bit 16 is a separate
 signal and the flash has no runtime bank switching. The programmer must
 address the entire chip and write the zero-filled upper bank too.
 
 Use a regulated 3.3 V supply and verify the voltage domains on all address,
-control and data lines. Hold WE# at flash VDD in the target. Confirm the
-full part suffix and use the matching PLCC32 or TSOP32 footprint. A DIP32
-socket requires a pin-mapped adapter or an approved footprint change.
-Verify CE#/OE# arbitration, physical timing and the complete readback.
-[CPLD-HW-0001](tasks/db/CPLD-HW-0001.md#sst39vf010-70-reference-connections)
+control and data lines. The new [memory-strobe ticket](tasks/db/CPLD-HW-0002.md)
+requires a dedicated, **normally deasserted FLASH_WR_N** control; **ordinary
+Apple CPU writes must never program the flash**. The board must pull WE#
+up safely to flash VDD and use the approved controlled interface if wired;
+do not tie it permanently high **and** claim a functional write output.
+Use the selected PLCC32 footprint/socket or a verified PLCC32-to-board
+adapter; this is not a DIP32-packaged component. Verify CE#/OE# arbitration,
+physical timing and the complete programmed-chip readback before sign-off.
+[Archived pin/timing reference](tasks/archive/CPLD-HW-0001-pre-rescope.md#sst39vf010-70-reference-connections)
 
 The STM32 remains responsible for its SPI bus, serial flash and RTC. The
 parallel flash serves the CPU via the CPLD memory bus.
@@ -69,4 +73,4 @@ parallel flash serves the CPU via the CPLD memory bus.
 3. Compare MMU-driven reads from that startup backing with the emitted bytes. Probe IOSEL, IOSTB including CFFF, the reserved regions, internal Apple ROM and reset vectors. Verify Apple startup, Applesoft `PR#3`/`PR#0` and the floppy bootstrap. Run slot-7 ProDOS and a byte-exact IOMEM transfer when its firmware and disk service are available.
 4. Program the SST39VF010-70 using that same file and compare the entire 131072-byte readback. Record the device, programmer parameters, binary hash, source commit and results.
 
-Software image composition and parity are accepted in [CPLD-ROM-0004](tasks/db/CPLD-ROM-0004.md) and [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md). **Hardware readiness still requires all four stages.** Physical programming, complete chip readback, electrical and timing verification are **OPEN** in [CPLD-HW-0001](tasks/db/CPLD-HW-0001.md); populated slot7 ProDOS/IOMEM runs remain in [CPLD-TEST-0001](tasks/db/CPLD-TEST-0001.md).
+Software image composition and parity are accepted in [CPLD-ROM-0004](tasks/db/CPLD-ROM-0004.md) and [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md). **Hardware readiness still requires all four stages.** [CPLD-HW-0001](tasks/db/CPLD-HW-0001.md) is resolved **only for architecture decisions**; [CPLD-HW-0002](tasks/db/CPLD-HW-0002.md) covers RTL/emulator memory strobes. Physical programming, complete chip readback, electrical and timing verification remain **pending a separately approved board-validation ticket**, not claimed by either ticket. Populated slot7 ProDOS/IOMEM runs remain in [CPLD-TEST-0001](tasks/db/CPLD-TEST-0001.md).
