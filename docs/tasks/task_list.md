@@ -31,6 +31,7 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | `CPLD-HW-0003` | TASK | RESOLVED | Review, fix and optimise IOU SPI-slave RTL | M3 — IOMEM disk service | [Details](db/CPLD-HW-0003.md) |
 | `CPLD-HW-0004` | TASK | REVIEW | Move peripheral outputs to MMU; validate CPLD fit and timing | M1/M3 — RTL verification | [Details](db/CPLD-HW-0004.md) |
 | `CPLD-HW-0005` | TASK | OPEN | Define authorised parallel-NOR update route | M1 — ROM update capability | [Details](db/CPLD-HW-0005.md) |
+| `CPLD-HW-0006` | TASK | OPEN | Qualify physical CPLD timing, pin plan and bus isolation | Hardware integration / PCB readiness | [Details](db/CPLD-HW-0006.md) |
 
 ## CPLD-BLD — Build automation
 
