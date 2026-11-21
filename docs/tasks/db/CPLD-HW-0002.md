@@ -1,7 +1,7 @@
 # CPLD-HW-0002 — Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **ID:** `CPLD-HW-0002`  
-**Status:** `REVIEW`
+**Status:** `RESOLVED`
 **Title:** Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **Description**
@@ -33,6 +33,8 @@ This is an **RTL and emulator software implementation ticket**. Hardware layout/
 - **2026-11-21 — Owner-requested build and verification retest:** From `rtl_IOU_MMU_TB/`, `./build.sh IOU_MMU_tb.v` freshly rebuilt the 18-module Verilator model. `cmake --build build --clean-first --parallel 2` then rebuilt and linked `apple_cpld` successfully (100%). `bash rtl_MMU/verification/run_tests.sh` passed 787 checks / 0 failures in both default and `FULL_MMU_ADDR` builds. `bash emulator/onboard/verification/run_tests.sh` passed 33 ROM-backing checks and 30,010 combined ROM-bus checks / 0 failures in each address build; exported images matched. `bash rtl_IOU/verification/run_spi_tests.sh` passed 59 checks / 0 failures.
 
 - **2026-11-21 — Independent review (GPT-6):** Inspected commit `2fbb9eb` and the current branch: `MMU_addr.v` qualifies the two shared strobes with reset released, DMA ownership, PHI_0 high, direction and existing selects; `MMU.v` and the combined Verilator top expose exactly those outputs. The C++ capture and `memory_controller.c` consume the sampled bus strobe plus select, and the changed ROM-bus tests explicitly probe mismatched caller direction. The SPI interface and existing memory map are untouched by this ticket. **The implemented bus-strobe code is APPROVED; no code changes requested.** Owner reports manual PR#3/PR#0 success, and developer records repeated Verilator build, 787 MMU checks (both builds), 30,010 ROM-bus checks per build and preserved 128 KiB image hash; reviewer inspected sources and test evidence but did **not independently execute** the test suite. **Ticket remains REVIEW** because no revised ATF1508ASV synthesis/fitter/timing evidence exists and the parallel NOR update route is only a documented gap: current `BUS_WR_N` is RAM-only, `ROM_EN_N` is read-qualified, and the emulator intentionally has no flash-command model. The SST39VF010's physical programmability must not be confused with a working CPLD programming interface. Resolve the update-path scope with the owner, document/test the authorised flash select/grant or explicitly create an approved follow-on, and attach a current fitter report before resolving this ticket. No PCB design is required here.
+
+- **2026-11-21 — Owner disposition of pending fitter work:** The `atf15xx_yosys` installation is ongoing. Accept and **RESOLVE the completed software RTL/emulator implementation** based on independent code review, developer's Verilator/ROM-bus tests and the owner's manual PR#3/PR#0 test. This is **not** ATF1508ASV hardware readiness. Transfer the **unfulfilled** resource/pin/timing fit criterion to [CPLD-HW-0004](CPLD-HW-0004.md) (DEFERRED until toolchain ready); transfer the **unimplemented** authorised NOR flash-update route and mutable command model to [CPLD-HW-0005](CPLD-HW-0005.md) (OPEN for separately approved design). Both obligations remain explicitly pending. The recorded acceptance checkboxes below are historical source requirements: unchecked transferred gates are not silently treated as passing. `RESOLVED` here means functional software reviewed, **not** complete NOR programming or fitted CPLD; `CLOSED` requires the owner's integration/merge.
 
 **Proposed Change**
 
@@ -94,4 +96,4 @@ Run the available Yosys/`atf15xx_yosys` and fitter flow for the **actual intende
 
 **Resolution Description**
 
-Independent code review **APPROVES commit `2fbb9eb`**, supported by developer regressions and owner manual PR#3/PR#0. The ticket remains **REVIEW** pending current ATF1508ASV synthesis/fitter/resource/timing evidence and owner disposition of the currently missing authorised NOR flash-update route. Full physical timing and board work are separate. No physical hardware design or in-system flash-programming protocol change is included.
+Independent code review **APPROVES commit `2fbb9eb`**, supported by developer regressions and owner manual PR#3/PR#0. Those outstanding obligations have been explicitly moved to [HW-0004](CPLD-HW-0004.md) (fitter) and [HW-0005](CPLD-HW-0005.md) (flash update) so the **reviewed RTL/emulator software work is RESOLVED** without misrepresenting either prerequisite as verified. Full physical timing and board work are separate. No physical hardware design or in-system flash-programming protocol change is included.
