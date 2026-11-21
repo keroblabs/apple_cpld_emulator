@@ -29,7 +29,7 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | `CPLD-HW-0001` | TASK | RESOLVED | Freeze STM32 ownership and 128 KiB PLCC flash architecture | M1 — ROM mapping | [Details](db/CPLD-HW-0001.md) |
 | `CPLD-HW-0002` | TASK | RESOLVED | Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator | M1 — ROM mapping | [Details](db/CPLD-HW-0002.md) |
 | `CPLD-HW-0003` | TASK | RESOLVED | Review, fix and optimise IOU SPI-slave RTL | M3 — IOMEM disk service | [Details](db/CPLD-HW-0003.md) |
-| `CPLD-HW-0004` | TASK | IN_PROGRESS | Move peripheral outputs to MMU; validate CPLD fit and timing | M1/M3 — RTL verification | [Details](db/CPLD-HW-0004.md) |
+| `CPLD-HW-0004` | TASK | REVIEW | Move peripheral outputs to MMU; validate CPLD fit and timing | M1/M3 — RTL verification | [Details](db/CPLD-HW-0004.md) |
 | `CPLD-HW-0005` | TASK | OPEN | Define authorised parallel-NOR update route | M1 — ROM update capability | [Details](db/CPLD-HW-0005.md) |
 
 ## CPLD-BLD — Build automation
@@ -42,7 +42,7 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
-| `CPLD-DOC-0001` | IMPROVEMENT | RESOLVED | Add stakeholder attribution and current-work summary to tickets | Engineering workflow | [Details](db/CPLD-DOC-0001.md) |
+| `CPLD-DOC-0001` | IMPROVEMENT | REVIEW | Add stakeholder attribution and current-work summary to tickets | Engineering workflow | [Details](db/CPLD-DOC-0001.md) |
 
 ## CPLD-FW — Apple slot 7 ProDOS firmware
 

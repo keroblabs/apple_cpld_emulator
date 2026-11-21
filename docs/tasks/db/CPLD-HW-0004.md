@@ -1,7 +1,7 @@
 # CPLD-HW-0004 — Move peripheral outputs to MMU; validate CPLD fit and timing
 
 **ID:** `CPLD-HW-0004`  
-**Status:** `IN_PROGRESS`  
+**Status:** `REVIEW`  
 **Title:** Move peripheral outputs to MMU; validate CPLD fit and timing
 **Reporter:** Project owner (Kerob Labs)
 **Reviewer:** Project owner; GPT-6
@@ -9,7 +9,7 @@
 
 **Description**
 
-The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is functionally accepted. The owner has now produced current ATF1508ASV fitter reports for both MMU and IOU via the dedicated `devel-rtl` environment. **Both previously reported variants fit PLCC84**, but the owner now requires a different physical signal allocation: move `CAS_OUT`, `SPK_OUT` and `AN0..AN3` to the MMU, while retaining the compact IOU without `IOU_COMPLETE`. The MMU must be re-fitted with `SPK_IN_MMU` and six external outputs restored. These revised physical configurations and their timing, pin/clock assignments and electrical integration remain **unverified**. This ticket is the explicit **CPLD timing/resource and software build feasibility gate** before declaring the designs ready to program or use as physical CPLDs.
+The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is functionally accepted. The owner has now produced current ATF1508ASV fitter reports for both MMU and IOU via the dedicated `devel-rtl` environment. **Both previously reported variants fit PLCC84**, but the owner now requires a different physical signal allocation: move `CAS_OUT`, `SPK_OUT` and `AN0..AN3` to the MMU, while retaining the compact IOU without `IOU_COMPLETE`. The MMU now exposes the six external outputs and is built with `SPK_IN_MMU` in tracked emulator tests. The project owner reports rerunning the physical Atmel fitter successfully and inspecting a current MMU fit with `AN0..AN3`, `SPK_OUT` and `CAS_OUT`; **the updated FIT/PIN/timing artefacts have not been provided for independent review**. Physical pin/clock timing and electrical integration remain unverified. This ticket is the explicit **CPLD timing/resource and software build feasibility gate** before declaring the designs ready to program or use as physical CPLDs.
 
 **Details**
 
@@ -23,6 +23,15 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 - Approved physical intent: `MMU` provides `CAS_OUT`, `SPK_OUT`, `AN0`, `AN1`, `AN2`, `AN3`; `IOU` is built with `IOU_COMPLETE` disabled. `FULL_MMU_ADDR` remains an independently selected physical address variant and must not change silently.
 - Legacy scope limitation: the owner's default IOU FIT already excluded `IOU_COMPLETE`. Consequently its reported 108/128 macrocells do **not** demonstrate a further reduction from this relocation; an internal IOU `AN3` may remain required for status reads.
 
+**Review findings (2026-11-21, reviewer GPT-6)**
+
+| Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
+| --- | --- | --- | --- | --- |
+| HW4-R1 | VERIFIED | Reviewed `44d9253` RTL, TB wiring and 23/23 structural checks; developer records full Verilator regression results | None for source-level MMU peripheral relocation | APPROVED |
+| HW4-R2 | VERIFIED (owner-reported) | Project owner tested emulator using PR#3/PR#0 and states current MMU and IOU fitter runs pass, with the MMU FIT listing all six relocated outputs | Preserve owner FIT artifacts and exact define build options | OWNER_REPORTED |
+| HW4-R3 | VERIFICATION_REQUIRED | New MMU FIT/PIN, resource totals, exact pin map, clock constraint/timing details and source hashes were not supplied in this review | Review current files and timing assumptions before approving hardware-facing completion | PENDING |
+| HW4-R4 | FUTURE_SCOPE | Physical DATA bus isolation, SPI↔PHI_0 CDC margins and final PCB clock/pin routing remain separate hardware integration risks | Commissioning/board validation with explicit evidence | NOT_TESTED |
+
 **Current Work**
 
 | State | Work / acceptance evidence | Responsible | Next action / reference |
@@ -33,8 +42,10 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 | DONE | Combined testbench sources all six external outputs from MMU; `IOU_common.AN3` remains connected internally to `IOU_iomem` | Assignee (GPT-6) | See integrated output and IOU status regression results below |
 | DONE | Configured MMU and combined Verilator builds with `SPK_IN_MMU`; removed `IOU_COMPLETE` from IOU and combined builds; `ADD_UART` remains disabled | Assignee (GPT-6) | Tracked emulator test runs both default and `FULL_MMU_ADDR`; post-change CPLD fits remain pending |
 | DONE | Output ownership, emulator capture, ROM/MMU, SPI and IOU status regressions pass in the requested variants | Assignee (GPT-6) | Exact commands and counts are recorded in Notes below |
-| PENDING | Re-run MMU and IOU Yosys/Atmel fits for the post-relocation tops and review resources, pins, warnings and timing | Assignee / Reviewer | Save FIT/PIN/TT3/JED, tool versions and source/define hashes; previous reports are pre-relocation baselines |
-| BLOCKED | Hardware timing, physical pin mapping, DATA bus isolation and SPI↔PHI_0 CDC not yet accepted | Reviewer + project owner | Review measured/spec-based timing and intended PCB pins; bench test later |
+| DONE | Owner reran the fitter successfully after relocation and reports MMU FIT includes all six outputs; owner manually tested emulator with PR#3/PR#0 | Reporter (project owner) | Owner-reported, not independently rerun or given post-change report files |
+| DONE | Independent source review approved MMU/IOU port routing, internal AN3 mirror, tracked emulator build defines and regression tests | Reviewer (GPT-6) | Source review commit `44d9253`; 23/23 structural checks passed |
+| PENDING | Inspect post-relocation MMU FIT/PIN and selected variants, real pin assignments, warnings, resource utilisation, detailed clock/timing and source hashes | Reviewer (GPT-6) / project owner | Supply archived latest MMU .fit/.pin plus toolchain.txt/sources.sha256 or equivalent evidence; no hardware programming yet |
+| BLOCKED | Hardware timing, physical pin mapping, DATA bus isolation and SPI↔PHI_0 CDC not yet accepted | Reviewer + project owner | Inspect current fit/timing evidence and intended PCB pins; hardware bench test remains separate |
 
 **Historical note provenance (best-effort; original Notes are unchanged)**
 
@@ -75,6 +86,10 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 - **2026-11-21 — ASSIGNEE (GPT-6) — Verification:** With Verilator 5.045 devel, `./emulator/onboard/verification/run_tests.sh` passed default and `FULL_MMU_ADDR` variants with 30,027 checks each, including `$C020/$C030`, emulator speaker/cassette capture and all `$C058–$C05F` annunciator set/clear outputs; ROM backing passed 33 checks. `./rtl_MMU/verification/run_tests.sh` passed 787 checks per address variant; `bash rtl_IOU/verification/run_spi_tests.sh` passed 59 checks; `./rtl_IOU/verification/run_spi_phase_tests.sh` passed 24,002 checks including an internal AN3 status readback check. Standalone MMU, reduced IOU and combined testbench Verilator builds also passed with the requested define sets. No post-change Yosys/Atmel fits, physical timing review or board tests were run; those acceptance gates remain pending.
 - **2026-11-21 — ASSIGNEE (GPT-6) — Commit recorded:** Local implementation commit `44d9253` on `rtl-compile-work`; the commit is unreviewed and has not been pushed or merged.
 
+- **2026-11-21 — REPORTER (Project owner) — Manual verification and review request:** Owner reviewed implementation source and confirmed the emulator worked with PR#3/PR#0. Owner reports that both CPLD fitter runs passed after the relocation and that the current MMU FIT includes `AN0`–`AN3`, `SPK_OUT` and `CAS_OUT`. No current post-change MMU FIT/PIN report, numeric resource total, timing report or source hashes were attached to this review; record as **owner-reported** test evidence, not independent inspection.
+- **2026-11-21 — REVIEWER (GPT-6) — Independent RTL code review:** Inspected committed `44d9253` and `69751e0`, including top-level MMU ports, `MMU_io` Q4–Q7 annunciator latches, `SPK_IN_MMU` speaker/cassette toggles, combined testbench external MMU outputs and internal IOU `AN3` status mirror, emulator capture, and Verilator test conditions. **23/23 direct structural checks passed**. Review found no in-scope RTL correction required; `44d9253` is APPROVED for source implementation. Developer-recorded Verilator results: 30,027 checks per emulator address variant, 787 per MMU variant, 59 SPI checks, 24,002 SPI/PHI phase checks. Reviewer did not run Verilator or physical fitter.
+- **2026-11-21 — REVIEWER (GPT-6) — Fitting/timing gate:** Owner-reported new fitter PASS is accepted as positive evidence that the updated MMU now fits the target with its six additional outputs. Detailed new MMU FIT/PIN, selected synthesis defines and numerical timing/clock constraints were not independently available; the original ticket explicitly requires detailed fit and timing review before RESOLVED. Move `IN_PROGRESS → REVIEW`; no code rework requested. Do not imply CLOSED or physical programming approval from a successful fit alone.
+
 **Proposed Change**
 
 **Approved implementation to perform before final fitting**
@@ -113,8 +128,8 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 | --- | --- | --- | --- |
 | `rtl-compile-work` | *documentation handoff* | UNREVIEWED | Owner-reported independent MMU/IOU FIT summaries; exact documentation commit recorded in branch history |
 | `rtl-compile-work` | `2038fee` | UNREVIEWED | Record owner-approved MMU signal ownership, emulator sync, fitting acceptance tests and stakeholder provenance |
-| `rtl-compile-work` | `44d9253` | UNREVIEWED | Move peripheral outputs to MMU; add output ownership, emulator capture and internal AN3 status regressions |
+| `rtl-compile-work` | `44d9253` | APPROVED | Move peripheral outputs to MMU; add output ownership, emulator capture and internal AN3 status regressions; source-level review passed 23/23 |
 
 **Resolution Description**
 
-**IN_PROGRESS:** MMU now owns the six external outputs, the combined emulator build uses `SPK_IN_MMU` with `IOU_COMPLETE` disabled, and the emulator plus MMU/IOU regressions pass. The post-relocation MMU and IOU fitter reports, pin/timing review, reviewer acceptance, and physical hardware/PCB validation remain pending. No UART is included.
+**REVIEW:** MMU owns all six external outputs and the emulator integration was reviewed and approved without code changes. Developer-recorded regressions pass; project owner independently tested emulator with PR#3/PR#0 and reports successful post-relocation CPLD fits including MMU `AN0..AN3`, `CAS_OUT`, `SPK_OUT`. Source implementation commit `44d9253` is APPROVED. Hardware-targeted ticket acceptance still requires direct review of updated FIT/PIN allocation, exact configuration and timing/clock evidence; none were attached here. Thus not yet RESOLVED or CLOSED. No UART or physical board/bench verification is claimed.
