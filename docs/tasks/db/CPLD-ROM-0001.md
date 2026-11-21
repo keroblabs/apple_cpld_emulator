@@ -80,11 +80,17 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 
 | Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
 | --- | --- | --- | --- | --- |
-| ROM1-R1 | TEST GAP | `tb_mmu_addr.cpp` test 4 samples CFFF and then C800 only with `MODE_SEL=1`, where both addresses remain raw CPU addresses whatever `slot_index_r` contains. | Add `MODE_SEL=0` sequence: select a nonzero slot, inspect translated C800, access CFFF, then inspect translated C800 showing slot index 0; prove first selected-slot access and PHI_0 timing. | OPEN |
-| ROM1-R2 | TEST COVERAGE | The current standalone test only checks slot-entry **start** addresses for slots 1–7, has no explicit C6FF/slot-end external checks, lacks RAM and MMU soft-switch combinations, and does not assert the external expansion `IOSTB_N` path. | Exercise C6FF/C7FF, external IOSEL/IOSTB both polarities, relevant soft-switch and RAM conditions; add a combined co-simulation integration assertion for the phase sampled by `memory_bus_latch`. | OPEN |
-| ROM1-R3 | HARDWARE COMPATIBILITY | `C6XX_N` is derived from C6xx address independently of `rom_enabled`, and may assert at the same time as onboard `ROM_EN_N` for C600 reads. | Document whether C6XX_N is a *decode only* or an external bus enable; make a bus-ownership/mutual-exclusion test for optional external floppy-controller configuration. Coordinate with CPLD-HW-0001. | OPEN |
+| ROM1-R1 | TEST GAP | `tb_mmu_addr.cpp` test 4 samples CFFF and then C800 only with `MODE_SEL=1`, where both addresses remain raw CPU addresses whatever `slot_index_r` contains. | Add `MODE_SEL=0` sequence: select a nonzero slot, inspect translated C800, access CFFF, then inspect translated C800 showing slot index 0; prove first selected-slot access and PHI_0 timing. | RESOLVED — the 4 KiB mapping makes translation active under MODE_SEL=1; test 4 now selects slot 7, reads C800 (`$7800`), reads CFFF, then C800 (`$0800`) proving the latch release; test 6 covers MODE_SEL=0. |
+| ROM1-R2 | TEST COVERAGE | The current standalone test only checks slot-entry **start** addresses for slots 1–7, has no explicit C6FF/slot-end external checks, lacks RAM and MMU soft-switch combinations, and does not assert the external expansion `IOSTB_N` path. | Exercise C6FF/C7FF, external IOSEL/IOSTB both polarities, relevant soft-switch and RAM conditions; add a combined co-simulation integration assertion for the phase sampled by `memory_bus_latch`. | RESOLVED — tests 2 (C7FF), 3 (C800/CFFE IOSTB), 6 (external IOSEL/IOSTB), 7 (C6FF/C700 both polarities), 10 (RAM main/aux via SW_RAMRD). Phase-sampled integration assertion added on the emulator side via `test_rom_backing.c` test 8 (ROM-0003). |
+| ROM1-R3 | HARDWARE COMPATIBILITY | `C6XX_N` is derived from C6xx address independently of `rom_enabled`, and may assert at the same time as onboard `ROM_EN_N` for C600 reads. | Document whether C6XX_N is a *decode only* or an external bus enable; make a bus-ownership/mutual-exclusion test for optional external floppy-controller configuration. Coordinate with CPLD-HW-0001. | RESOLVED — documented as pure decode in `docs/rom-memory-map.md` §2.3 (onboard fw vs external card mutually exclusive by config); test 7 asserts both ROM_EN_N and C6XX_N at C600 with fw on, and ROM back-off with fw off. Bus arbitration tracked in CPLD-HW-0001. |
 
 **Acceptance assessment:** Test coverage and verified-truth-table criteria remain open until those additional tests are supplied.
+
+**Rework assessment (2026-11-21):** The owner directive to enforce 4 KiB-per-slot
+IO firmware ROM windows was implemented in `MMU_addr.v`; the regression was
+expanded to 54/58 checks (both builds) and now covers the CFFF latch release,
+slot-end/boundary addresses, external IOSEL/IOSTB polarities, RAM soft-switch
+banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 
 **Notes**
 
@@ -97,6 +103,9 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 - **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW` after tests passed; awaiting owner acceptance.
 
 - **2026-11-20 — Independent Code Review:** Source-level review of commits `ac115446` and follow-up ticket hash recording. The 17-bit width fix is appropriate. The 47×2 checks are valid as reported by the developer but do not prove the CFFF latch release: test 4 only compares raw addresses under MODE_SEL=1. Requested additional external-slot transition and decode coverage. No code executed by reviewer.
+- **2026-11-21 — Rework (owner directive):** Enforced 4 KiB-per-slot IO firmware ROM windows in `rtl_MMU/MMU_addr.v` — the `rom_enabled` branch now splits on `D_FXXX_INT`: system ROM stays raw, IO firmware ROM (IOSEL/IOSTB) uses `{ slot_index, ADDR[11:0] }` (first 2 KiB IOSEL, second 2 KiB IOSTB). The external-card path shares the same formula.
+- **2026-11-21 — Test:** Rewrote `tb_mmu_addr.cpp` to lock the 4 KiB mapping and close ROM1-R1/R2/R3: CFFF latch release now observable (test 4), IOSEL/IOSTB boundaries (2,3), cross-slot ownership (5), external polarities (6), C6XX_N bus-ownership (7), system ROM raw (9), RAM main/aux banking (10). Results: default 54/0, FULL 58/0 (Verilator 5.045).
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `ac11544` superseded by the rev-2 commit.
 
 **Proposed Change**
 
@@ -106,15 +115,16 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 
 ### Acceptance criteria and evidence to record
 
-- [ ] A reviewed table gives selected ROM, physical address, internal/external choice and strobes for every slot ROM region and C800–CFFF (see truth table).
-- [ ] Automated tests cover C700/C7FF, C600/C6FF, C800/CFFE/CFFF and changes of selected slot; the C6XX_N compatibility path is preserved (`tb_mmu_addr.cpp` tests 1–6, 10).
-- [ ] All ROM enables and MEM_ADDR_OUT values are verified at the phase the emulator samples them; the one RTL defect (17-bit literal width) is separately explained and tested.
+- [x] A reviewed table gives selected ROM, physical address, internal/external choice and strobes for every slot ROM region and C800–CFFF (see truth table rev 2).
+- [x] Automated tests cover C700/C7FF, C600/C6FF, C800/CFFE/CFFF and changes of selected slot; the C6XX_N compatibility path is preserved (`tb_mmu_addr.cpp` tests 1–7, 11).
+- [x] All ROM enables and MEM_ADDR_OUT values are verified at the phase the emulator samples them; the RTL width fix and the 4 KiB mapping are separately explained and tested.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `ac11544` | `CHANGES_REQUESTED` | MMU_addr truth-table regression + 17-bit literal width fix |
+| `mmu-rom-analysis` | `ac11544` | `SUPERSEDED` | MMU_addr truth-table regression + 17-bit literal width fix |
+| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
 
 **Resolution Description**
 
@@ -126,3 +136,9 @@ address. One minor RTL width fix applied (`16'd0` → `17'd0`) with no behaviour
 change. No functional regression introduced.
 
 **Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.
+
+**Rework disposition (2026-11-21):** Owner directive implemented. `MMU_addr.v`
+now emits a per-slot 4 KiB window `{ slot_index, ADDR[11:0] }` for IO firmware
+ROM, raw address for system ROM. The regression (`tb_mmu_addr.cpp`) was expanded
+to 54/58 checks (default/FULL, 0 failures) and resolves ROM1-R1/R2/R3. Prior
+commit `ac11544` superseded. Awaiting owner re-review/acceptance.

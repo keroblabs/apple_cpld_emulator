@@ -79,9 +79,14 @@ reg [4:0]   mem_addr_out_reg;
 always @(*) begin
     if( ram_enabled) begin
         mem_addr_out_reg  = { addr_16, ADDR[15:13], addr_12, ADDR[11:0] };
-    end else if( rom_enabled ) begin
+    end else if( rom_enabled & D_FXXX_INT ) begin
+        // System ROM (D000-FFFF): raw CPU address, bit16 = 0.
         mem_addr_out_reg  = { 1'b0, ADDR[15:12], ADDR[11:0] };
-    end else if( ~onboard_fw_n ) begin
+    end else if( rom_enabled | (~onboard_fw_n) ) begin
+        // IO firmware ROM (IOSEL/IOSTB) and external-card path share the
+        // per-slot 4 KiB window: { slot_index, ADDR[11:0] }. First 2 KiB of
+        // the window holds the IOSEL ($Cn00-$CnFF) page; the second 2 KiB
+        // holds the IOSTB expansion ($C800-$CFFF) for the selected slot.
         mem_addr_out_reg  = { 2'b00, slot_index, ADDR[11:0] };
     end else begin
         mem_addr_out_reg  = 17'd0;
@@ -91,9 +96,13 @@ end
 always @(*) begin
     if( ram_enabled) begin
         mem_addr_out_reg  = { addr_16, ADDR[15:13], addr_12 };
-    end else if( rom_enabled ) begin
+    end else if( rom_enabled & D_FXXX_INT ) begin
+        // System ROM (D000-FFFF): raw upper bits.
         mem_addr_out_reg  = { 1'b0, ADDR[15:12] };
-    end else if( ~onboard_fw_n ) begin
+    end else if( rom_enabled | (~onboard_fw_n) ) begin
+        // IO firmware ROM / external-card: per-slot 4 KiB window select.
+        // The lower 12 bits (within-window offset = ADDR[11:0]) are
+        // reconstructed from the CPU address bus in the default build.
         mem_addr_out_reg  = { 2'b00, slot_index };
     end else begin
         mem_addr_out_reg  = 5'b0;
