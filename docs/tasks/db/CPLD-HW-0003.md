@@ -35,6 +35,8 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 - **2026-11-21 — Fitter evidence:** `yosys`, `atf15xx_yosys` and `fit1508` are unavailable in this environment and no fitter script was found under `/home/marcio/Tools`. `rtl_IOU/IOU.fit` is a historical November 2025 baseline report, not a revised fit. ATF1508ASV macrocells, I/O assignments, timing and feasible external bit-clock remain unverified. Keep this ticket in REVIEW pending the actual fitter run and full Apple emulator regressions.
 - **2026-11-21 — Owner-requested build and verification retest:** From `rtl_IOU_MMU_TB/`, `./build.sh IOU_MMU_tb.v` freshly rebuilt the 18-module Verilator model. `cmake --build build --clean-first --parallel 2` then rebuilt and linked `apple_cpld` successfully (100%). `bash rtl_IOU/verification/run_spi_tests.sh` passed 59 checks / 0 failures. `bash emulator/onboard/verification/run_tests.sh` passed 30,010 combined ROM-bus checks / 0 failures in each of the default and `FULL_MMU_ADDR` builds, including mailbox/keyboard integration. `bash rtl_MMU/verification/run_tests.sh` passed 787 checks / 0 failures in both address builds.
 
+- **2026-11-21 — Independent review (GPT-6):** Inspected commit `17ea4c6`, `IOU_spi_iface.v`, the focused test and integration call sites. The 13-bit transaction and 5-selector/8-payload public layout are unchanged; receiver expansion to 13 bits fixes previously demonstrated selector aliases, and 4-bit count saturation at 14 prevents command replay on extra clocks. The test harness demonstrates baseline failure and revised 59/59 passing checks; owner additionally reports successful PR#3/PR#0, with developer's 30,010 ROM-bus checks in each MMU address variant and 787 MMU checks. **The implemented SPI RTL fix is APPROVED; no source rework requested.** Reviewer inspected code and recorded tests but did **not independently execute** the Verilator suite. **Ticket remains REVIEW** because no revised ATF1508ASV fit/timing report exists. Before resolution, attach target fitter results and test SPI↔PHI_0 pending/ack progress over several relative clock phases and a specified conservative bit-banged SCK rate/hold interval: `reg_*_pending_*` requests are combinational and only captured by PHI_0-clocked `IOU_toggle_jk`, so one fixed scheduler phase does not prove a short request cannot be missed. This requests RTL/software verification, **not** STM32 peripheral compatibility or PCB design. Physical electrical timing remains outside this ticket.
+
 **Proposed Change**
 
 1. **Freeze the transport.** Preserve **13-bit MSB-first** transfers: five selector bits plus eight payload bits; simultaneous MISO flags/data layout, defined selectors `0` (consume Apple byte), `1` (publish byte), `2` (keyboard), `5` (status-only), and all current Apple `$C0F1/$C0F2/$C0F3` mailbox and PHI_0 pending-bit semantics. Keep the existing documented preload and trailing clock behaviour unless a waveform-proven bug and an owner-approved compatible correction require otherwise. No register/address/opcode/transport change is authorised.
@@ -49,16 +51,16 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 - [x] Test vectors include first transfer, CS-high preload, all payload bit positions, trailing clock, repeated/status-only transfers, keyboard traffic, aborts/extra clocks, and interleaved PHI_0 accesses.
 - [x] Selector-alias and extra-clock command-replay defects fail against the baseline and pass after correction; no final-bit loss or unintended selector side effects in the focused regression.
 - [x] A bit-banged-master waveform contract is documented, **without requiring STM32 peripheral-mode compatibility**.
-- [ ] Original and revised RTL pass Verilator integration tests and existing Apple/keyboard/IOMEM regressions; unrelated emulator protocols unchanged.
+- [x] Original and revised RTL pass Verilator integration tests and existing Apple/keyboard/IOMEM regressions; unrelated emulator protocols unchanged.
 - [ ] ATF1508ASV synthesis/fitter/timing and resource comparison included. No PCB or STM32 firmware work performed.
-- [ ] If no improvement is justified, provide an evidence-based no-code-change conclusion with tests and fitter results; do not force cosmetic RTL churn.
+- [x] The no-code-change alternative is **not applicable**: original RTL defects were reproduced and justified the focused corrections.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `cpld-hw-0001-0003-tickets` | `17ea4c6` | `UNREVIEWED` | Fix five-bit SPI selector decoding and extra-clock counter replay; add failing-before/passing-after Verilator tests, integration coverage, timing contract and VCD evidence. |
+| `cpld-hw-0001-0003-tickets` | `17ea4c6` | `APPROVED` | Fix five-bit SPI selector decoding and extra-clock counter replay; add failing-before/passing-after Verilator tests, integration coverage, timing contract and VCD evidence. |
 
 **Resolution Description**
 
-The demonstrated selector and extra-clock defects are fixed and focused RTL plus combined mailbox/keyboard regressions are presented for review. Pending full Apple emulator regressions, ATF1508ASV fitting/resource/timing evidence, and physical SPI↔PHI_0 timing validation. Hardware implementation and STM32 firmware are outside this task.
+Independent code review **APPROVES commit `17ea4c6`**, supported by failing-before/passing-after tests, integrated developer regressions and owner manual PR#3/PR#0. The ticket remains **REVIEW** until ATF1508ASV resource/fitter/timing results and a digital SPI↔PHI_0 phase/hold regression are recorded. Physical electrical validation is explicitly outside this software ticket. Hardware implementation and STM32 firmware are outside this task.
