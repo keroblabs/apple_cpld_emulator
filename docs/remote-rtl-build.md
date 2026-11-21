@@ -39,7 +39,7 @@ CPLD_IOU_DEFINES=IOU_COMPLETE ./scripts/build-cpld.sh iou
 CPLD_MMU_DEFINES=SPK_IN_MMU ./scripts/build-cpld.sh mmu
 ```
 
-The default build has no extra defines. **Do not assume the default variant is the approved physical PCB configuration.** `FULL_MMU_ADDR` changes the MMU address pin count; `IOU_COMPLETE` changes IOU exported pins. Ticket HW-0004 must document which variants were fitted and approved. The driver does not set physical pin assignments or timing constraints; it preserves whatever pin annotations are present in the top module and reports what the fitter chooses.
+The default build has no extra defines. **For CPLD-HW-0004, the proposed physical configuration is MMU with `SPK_IN_MMU` and IOU without `IOU_COMPLETE`; do not assume a plain `all` build is the approved paired configuration.** Use `CPLD_MMU_DEFINES=SPK_IN_MMU ./scripts/build-cpld.sh mmu` and `CPLD_IOU_DEFINES='' ./scripts/build-cpld.sh iou` until a reviewed tracked configuration is implemented. The combined Verilator top must obtain `CAS_OUT`, `SPK_OUT` and `AN0..AN3` from `MMU_io`; the ignored local `rtl_IOU_MMU_TB/build.sh` may require removal of `IOU_COMPLETE` and addition of `SPK_IN_MMU`. These changes and new real fit reports are **pending**. `FULL_MMU_ADDR` changes the MMU address pin count; `IOU_COMPLETE` changes IOU exported pins. Ticket HW-0004 must document which variants were fitted and approved. The driver does not set physical pin assignments or timing constraints; it preserves whatever pin annotations are present in the top module and reports what the fitter chooses.
 
 `RTL_BUILD_HOST` can override `devel-rtl` with an SSH host alias. All other build environment/RTL tooling stays on `devel-rtl`.
 
