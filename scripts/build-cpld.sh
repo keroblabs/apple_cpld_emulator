@@ -7,7 +7,8 @@ usage() {
 Usage: scripts/build-cpld.sh {mmu|iou|all}
 
 Build each physical CPLD independently on devel-rtl, returning results to
-build/rtl-cpld/<TOP>.<unique-id>/ (ignored by Git).
+build/rtl-cpld/<TOP>_YYYYMMDD_HHMMSS/ (ignored by Git).
+If a build starts in the same second, use suffix _01, _02, and so on.
 
 Environment:
   RTL_BUILD_HOST       SSH host alias (default: devel-rtl)
@@ -48,6 +49,32 @@ validate_defines "${CPLD_MMU_DEFINES:-}"
 validate_defines "${CPLD_IOU_DEFINES:-}"
 
 mkdir -p "$root/build/rtl-cpld"
+
+# Local timestamps are taken on devel. mkdir is atomic, so a concurrent
+# invocation cannot overwrite another run using the same timestamp.
+new_result_dir() {
+    local top=$1 stamp base candidate suffix=0
+    stamp=$(date '+%Y%m%d_%H%M%S') || return
+    [[ "$stamp" =~ ^[0-9]{8}_[0-9]{6}$ ]] || {
+        echo "Invalid build timestamp: $stamp" >&2
+        return 1
+    }
+    base="$root/build/rtl-cpld/${top}_${stamp}"
+    candidate=$base
+    while ! mkdir -- "$candidate" 2>/dev/null; do
+        if [[ ! -d "$candidate" ]]; then
+            echo "Cannot create build output directory: $candidate" >&2
+            return 1
+        fi
+        suffix=$((suffix + 1))
+        if (( suffix > 999 )); then
+            echo "Too many builds for timestamp $stamp" >&2
+            return 1
+        fi
+        printf -v candidate '%s_%02d' "$base" "$suffix"
+    done
+    printf '%s\n' "$candidate"
+}
 
 build_one() {
     local top=$1 source_dir="$root/rtl_$1" defines remote_dir result_dir run_cmd rc=0
@@ -90,7 +117,7 @@ build_one() {
     if ((${#shared_sources[@]} > 0)); then
         rsync -a -- "${shared_sources[@]}" "$host:$remote_dir/input/"
     fi
-    result_dir=$(mktemp -d "$root/build/rtl-cpld/${top}.XXXXXXXX")
+    result_dir=$(new_result_dir "$top") || return
 
     # shell-escaped arguments for ssh's remote shell. The build script itself
     # is streamed via stdin, so it is always the version in this checkout.

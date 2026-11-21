@@ -50,7 +50,7 @@ For *each* selected top, the driver creates an isolated remote `~/rtl-build/src/
 Outputs are copied into unique ignored directories such as:
 
 ```text
-build/rtl-cpld/MMU.ABC12345/
+build/rtl-cpld/MMU_20261121_171134/
     MMU.edif
     MMU.fit
     MMU.jed
@@ -64,7 +64,14 @@ build/rtl-cpld/MMU.ABC12345/
     sources.sha256
 ```
 
-The equivalent IOU results use a distinct directory. On a failing build, the client still collects diagnostics when available and exits nonzero. A generated `.jed` file alone does not authorize physical programming: examine the FIT resource, pin, JTAG/security, timing and warning data. Existing remote runs are intentionally retained for diagnosis; clean obsolete `~/rtl-build/src/cpld.*` directories manually after confirming artifact archival.
+The equivalent IOU results use a distinct directory such as
+`build/rtl-cpld/IOU_20261121_171134/`. Timestamps are generated on `devel`
+using its **local clock and timezone**, in `YYYYMMDD_HHMMSS` format. The
+created directory is exclusive: if a build with the same timestamp already
+exists, an atomic `mkdir` retry appends `_01`, `_02`, etc., so earlier builds
+are never overwritten. This applies to both success and failure output.
+
+On a failing build, the client still collects diagnostics when available and exits nonzero. A generated `.jed` file alone does not authorize physical programming: examine the FIT resource, pin, JTAG/security, timing and warning data. Existing remote runs are intentionally retained for diagnosis; clean obsolete `~/rtl-build/src/cpld.*` directories manually after confirming artifact archival.
 
 ## Tests and acceptance
 
@@ -75,4 +82,4 @@ bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build
 bash tests/test_remote_build.sh
 ```
 
-After review and local patch application on `devel`, run `./scripts/build-cpld.sh all`. Inspect both `.fit` files and `toolchain.txt`, note source SHA checksums and compare pins/macrocells/timing with the physical design. Re-run relevant existing Verilator suites if any RTL is changed. Record the real outputs and results in HW-0004; do not mark that ticket RESOLVED merely because the driver passes mock tests.
+After updating the working branch on `devel`, run `./scripts/build-cpld.sh all`. Inspect both `.fit` files and `toolchain.txt`, note source SHA checksums and compare pins/macrocells/timing with the physical design. Re-run relevant existing Verilator suites if any RTL is changed. Record the real outputs and results in HW-0004; do not mark that ticket RESOLVED merely because the driver passes mock tests.

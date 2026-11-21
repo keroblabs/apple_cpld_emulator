@@ -28,6 +28,12 @@ printf 'lib\n' > "$atf_root/cells.lib"
 printf 'map\n' > "$atf_root/techmap.v"
 printf 'fitter\n' > "$atf_root/vendor/fit1508.exe"
 
+cat > "$test_root/bin/date" <<'SH'
+#!/usr/bin/env bash
+[[ ${1:-} == '+%Y%m%d_%H%M%S' ]] || exit 65
+printf '%s\n' "${MOCK_TIMESTAMP:-20261121_171134}"
+SH
+
 cat > "$test_root/bin/ssh" <<'SH'
 #!/usr/bin/env bash
 set -e
@@ -104,8 +110,9 @@ run() { (cd "$fixture" && ./scripts/build-cpld.sh "$@") > "$test_root/last.log" 
 fail() { if run "$@"; then cat "$test_root/last.log"; echo "Expected failure: $*" >&2; exit 1; fi; }
 
 run mmu
-mapfile -t dirs < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU.*')
+mapfile -t dirs < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU_*')
 [[ ${#dirs[@]} == 1 && -s ${dirs[0]}/MMU.edif && -s ${dirs[0]}/MMU.jed ]]
+[[ ${dirs[0]} == "$fixture/build/rtl-cpld/MMU_20261121_171134" ]]
 [[ -s ${dirs[0]}/sources.sha256 && -s ${dirs[0]}/toolchain.txt && -s ${dirs[0]}/synth.ys ]]
 [[ -f ${dirs[0]}/MMU.pin ]]
 [[ $(cat "${dirs[0]}/MMU.edif") == 'edif for MMU' ]]
@@ -113,18 +120,19 @@ mapfile -t dirs < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type
 note 'MMU: reads MMU sources plus four shared helpers, excludes IOU top, fits ASV and returns artifacts'
 
 CPLD_IOU_DEFINES=IOU_COMPLETE run iou
-mapfile -t ios < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU.*')
+mapfile -t ios < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU_*')
 [[ ${#ios[@]} == 1 && -s ${ios[0]}/IOU.fit && -s ${ios[0]}/IOU.jed ]]
+[[ ${ios[0]} == "$fixture/build/rtl-cpld/IOU_20261121_171134" ]]
 grep -q -- '-DIOU_COMPLETE' "${ios[0]}/synth.ys"
 [[ ! -f ${ios[0]}/MMU.edif ]]
 note 'IOU: uses independent source files and explicit IOU_COMPLETE define'
 
 CPLD_MMU_DEFINES=FULL_MMU_ADDR run mmu
-grep -ql -- '-DFULL_MMU_ADDR' "$fixture"/build/rtl-cpld/MMU.*/synth.ys
+grep -ql -- '-DFULL_MMU_ADDR' "$fixture"/build/rtl-cpld/MMU_*/synth.ys
 note 'MMU: optional FULL_MMU_ADDR included in synthesis'
 
 CPLD_MMU_DEFINES=SPK_IN_MMU run mmu
-grep -ql -- '-DSPK_IN_MMU' "$fixture"/build/rtl-cpld/MMU.*/synth.ys
+grep -ql -- '-DSPK_IN_MMU' "$fixture"/build/rtl-cpld/MMU_*/synth.ys
 note 'MMU: SPK_IN_MMU variant includes shared IOU_toggle_d helper'
 
 # Missing dependencies must fail loudly rather than producing a silently
@@ -136,9 +144,19 @@ mv "$fixture/rtl_IOU/TTL_ls259.v.hidden" "$fixture/rtl_IOU/TTL_ls259.v"
 note 'MMU: missing cross-directory shared module fails clearly'
 
 run all
-[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU.*' | wc -l) == 4 ]]
-[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU.*' | wc -l) == 2 ]]
+[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU_*' | wc -l) == 4 ]]
+[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU_*' | wc -l) == 2 ]]
+[[ -d "$fixture/build/rtl-cpld/MMU_20261121_171134_03" ]]
+[[ -d "$fixture/build/rtl-cpld/IOU_20261121_171134_01" ]]
 note 'all: two independent builds; non-overwriting per-run output directories'
+
+[[ -f "$fixture/build/rtl-cpld/MMU_20261121_171134/MMU.jed" ]]
+[[ -f "$fixture/build/rtl-cpld/MMU_20261121_171134_01/MMU.jed" ]]
+note 'timestamp collisions use numeric suffixes without replacing older results'
+
+MOCK_TIMESTAMP=wrong fail mmu
+grep -q 'Invalid build timestamp' "$test_root/last.log"
+note 'invalid timestamp rejected, preventing malformed output directory'
 
 fail unrelated
 fail mmu extra
@@ -150,12 +168,12 @@ MOCK_SSH_FAIL=1 fail mmu
 note 'SSH failure returns nonzero'
 
 MOCK_YOSYS_FAIL=1 fail mmu
-latest=$(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU.*' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
+latest="$fixture/build/rtl-cpld/MMU_20261121_171134_04"
 [[ -f "$latest/yosys.log" && ! -e "$latest/MMU.jed" ]]
 note 'Yosys failure retains diagnostics without presenting a stale JEDEC'
 
 MOCK_FITTER_FAIL=1 fail iou
-latest=$(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU.*' -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)
+latest="$fixture/build/rtl-cpld/IOU_20261121_171134_02"
 [[ -f "$latest/fitter.log" && -s "$latest/IOU.edif" && ! -e "$latest/IOU.jed" ]]
 note 'fitter failure retains EDIF and diagnostics, returns nonzero'
 
