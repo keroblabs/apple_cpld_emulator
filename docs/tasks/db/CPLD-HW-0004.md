@@ -66,6 +66,7 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 - **2026-11-21 — REVIEWER (GPT-6) — RTL investigation:** In `rtl_MMU/MMU_io.v`, speaker/cassette toggles already exist under `SPK_IN_MMU`, but annunciators currently terminate at `AN0_unused..AN3_unused`; the top `rtl_MMU/MMU.v` has commented-out annunciator ports. The combined `rtl_IOU_MMU_TB/IOU_MMU_tb.v` drives external `CAS_OUT`, `SPK_OUT`, `AN0..AN3` from `IOU_common`. Revise the connection source to `MMU_io`, preserving SPI/IOMEM and C0Fx interfaces. `IOU_common` still has an internal `AN3` state feeding `IOU_iomem` status readback; do not silently remove it without a separate semantics test or a justified inter-CPLD signal.
 - **2026-11-21 — REVIEWER (GPT-6) — Build-config qualification:** Existing physical `IOU.fit` proves the **default, non-IOU_COMPLETE** variant, not the expanded variant. The previous `MMU.fit` did not include the requested `SPK_IN_MMU` external signals. Actual variant commands must include `CPLD_MMU_DEFINES=SPK_IN_MMU ./scripts/build-cpld.sh mmu` and `CPLD_IOU_DEFINES='' ./scripts/build-cpld.sh iou`; check `rtl_IOU_MMU_TB/build.sh`, which is ignored by Git and may still supply `IOU_COMPLETE`. The final build configuration must be reproducible in tracked files. `FULL_MMU_ADDR` remains a separate pin-count decision.
 - **2026-11-21 — REVIEWER (GPT-6) — Verification plan:** Require a failing-before/passing-after Verilator regression for the C020/C030 toggle outputs, C058/C059 through C05E/C05F annunciator writes, the IOU AN3 status mirror, and no duplicate external IOU outputs. Rebuild combined emulator and run existing SPI/MMU/ROM-bus regression tests. Re-run both target fits and inspect actual post-relocation FIT/PIN/timing reports; do not inherit the prior MMU's 42/128 utilisation or claim the old IOU results reflect new interface wiring.
+- **2026-11-21 — REVIEWER (GPT-6) — Documentation verification:** 26/26 direct consistency checks passed across updated HW-0004, DOC-0001, methodology and task index: stakeholder role fields, current DONE/PENDING items, matching title/status, original historical Notes preserved byte-for-byte as a contiguous segment, and relocation/re-fit criteria outstanding. No Verilator synthesis, remote fitting or physical bench tests were run for this design-and-methodology update. RTL implementation remains with an unassigned developer.
 
 **Proposed Change**
 
@@ -104,6 +105,7 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `rtl-compile-work` | *documentation handoff* | UNREVIEWED | Owner-reported independent MMU/IOU FIT summaries; exact documentation commit recorded in branch history |
+| `rtl-compile-work` | `2038fee` | UNREVIEWED | Record owner-approved MMU signal ownership, emulator sync, fitting acceptance tests and stakeholder provenance |
 
 **Resolution Description**
 
