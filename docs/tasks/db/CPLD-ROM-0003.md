@@ -1,7 +1,7 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `IN_PROGRESS`\
+**Status:** `REVIEW`\
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
@@ -27,6 +27,12 @@ and before CPU execution. IOSEL is at file offset `$000` and IOSTB is at
 `$800`. Valid repeat loads replace the entire slot. Invalid input leaves
 the array intact. [ROM map](../../rom-memory-map.md)
 
+`build/apple_cpld --rom IMAGE.bin` initializes the board from an exact
+262144-byte flat file. The backing copies its bytes in physical address order
+after a complete read and length check. Raw mode rejects subsequent slot
+loads. The DIP32 device and programmer file length are tracked separately in
+[CPLD-ROM-0004](CPLD-ROM-0004.md).
+
 Normal board reads use the address sampled from `MEM_ADDR_OUT`, with
 `ROM_EN_N` for the Apple ROM and IOSEL, C6XX or IOSTB for an external slot
 in emulator mode. The shared backing traces the original CPU address,
@@ -40,9 +46,9 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 | ROM3-R2, real startup and integration | The combined model checks cross-slot selection and the `$CFFF` byte and release. The full emulator reached the Apple IIe prompt and executed the slot-6 disk bootstrap with a raw fixture. |
 | ROM3-R3, bounds visibility | The backing bounds check uses `0x40000`. A bus-test injection at that address through `memory_controller_access()` returns zero, raises the trace flag and increments the count. An RTL-generated address is at most 17 bits. |
 | ROM3-R4, input validation and isolation | The loader validates slots 1–7, a non-null pointer and exact 4096-byte length before one copy. The C tests cover short, long, overflowing and invalid-slot inputs, repeat loads and system/neighbor byte isolation. |
-| ROM3-R5 and ROM3-R6, system entry and header validation | The raw slot API replaces the tagged container. The complete flat file will carry the Apple bytes at their physical offsets. Startup validation will cover the exact file length and complete read. |
-| ROM3-R7, partial mutation | The slot API validates before copying. The new flat-file startup must validate the whole input before changing the shared backing. |
-| ROM3-R8, packaging and integration | The real bus test covers the per-slot development API. Direct whole-image startup and fixture regression belong here. Deterministic release composition and chip parity remain in CPLD-ROM-0004. |
+| ROM3-R5 and ROM3-R6, system entry and header validation | The flat file replaces the tagged container and supplies every byte, including the Apple ROM. The startup loader checks the exact length and the complete read. The tests compare all 262144 bytes. |
+| ROM3-R7, partial mutation | Both loaders validate before copying. Short and long file rejection, preserved contents and mode after failure, and a successful retry are tested. |
+| ROM3-R8, packaging and integration | The real combined bus tests both startup modes. The actual desktop app boots from flat fixtures. Deterministic release composition and the final chip parity test remain in CPLD-ROM-0004. |
 
 **Notes**
 
@@ -73,6 +79,11 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 - **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` after combined bus, Apple ROM startup and Disk II bootstrap verification.
 - **2026-11-21 — Merge decision:** Preserved the single 256 KiB backing, the raw slot API, and the combined regression from `174966e`. The owner runtime report in `2cdcba6` applies to the older development setup. The tagged-format findings ROM3-R5 through ROM3-R7 are superseded for slot loads. The required whole-image startup and raw-mode tests from `22285ea` remain in scope here. Release image composition and physical readback remain in CPLD-ROM-0004.
 - **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS` to implement direct startup from a flat raw ROM while retaining the development slot API.
+- **2026-11-21 — Implementation:** `source/app_emulator.c` adds `--rom IMAGE.bin`. `board.c` and `memory_controller.c` select the file at startup. `rom_backing.c` reads exactly 262144 bytes before committing the copy and rejects slot writes in raw mode. Before the change an invalid `--rom` path started the default emulator. Missing, short and oversized files now exit with a load error.
+- **2026-11-21 — Verification:** `bash emulator/onboard/verification/run_tests.sh` passes 55 backing checks and 50,730 combined bus checks per variant (Verilator 5.045, GCC 15.2.1). Raw-mode probes compare all seven IOSEL and IOSTB windows, their CFFF bytes and subsequent release, and the original address ranges for internal Cx and system ROM against fixture file bytes. `bash rtl_MMU/verification/run_tests.sh` passes 462 checks per variant.
+- **2026-11-21 — Raw desktop verification:** CMake 3.31.6, Fedora 42, SDL 2.33.0 software renderer with dummy video. Direct startup with the Apple-only image reached the `Apple //e` Applesoft prompt. A temporary probe fed `PR#3`, `PR#0` and `PRINT 2+3` through the keyboard controller's normal SPI path and captured the rendered screen. The CPU entered internal slot 3 at `$C300`, then the screen showed `PR#0`, the result `5` and a new `]` prompt. The fixture used the original Apple image at `0x08000`, zero fill and SHA-256 `4f598d9a529f1a65fa83e8674b0c41c9950d60c1843839da788fd96ce0ffe7f0`.
+- **2026-11-21 — Raw Disk II verification:** A second flat fixture placed the existing 256-byte Disk II bootstrap at `0x06000` and had SHA-256 `a73675446e4eebf0d9f1eb4c29881e16e416a7dc56755847c08ed0712cdb14f0`. The CPU fetched it at `$C600`, copied all 256 sector-zero bytes from a scratch copy of `solo-flight.dsk` and fetched the first sector instruction at `$0801`. Both desktop probes used the raw CLI with the fixture bytes fixed before startup.
+- **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` for direct raw-file startup and fixture verification.
 
 **Proposed Change**
 
@@ -84,7 +95,7 @@ content and rejects later slot copies in that mode.
 - [x] A synthetic 4 KiB slot-7 binary reads byte for byte at `$C700–$C7FF` and `$C800–$CFFF`.
 - [x] Cross-slot access, CFFF release, disabled ROM writes, invalid inputs and traced bounds behavior pass.
 - [x] Full emulator reaches the Apple ROM prompt with the unmodified image and empty slot windows.
-- [ ] A complete raw ROM file boots and provides byte-exact ROM reads through the MMU. Repeat `PR#3`/`PR#0` and the Disk II bootstrap with raw startup fixtures.
+- [x] Complete flat fixtures boot directly and provide byte-exact MMU reads. Repeated `PR#3`/`PR#0` and verified the Disk II bootstrap in raw mode.
 - [ ] Test the actual programmer image after composition and DIP32 part confirmation. [CPLD-ROM-0004](CPLD-ROM-0004.md)
 
 **Commits**
@@ -97,10 +108,11 @@ content and rejects later slot copies in that mode.
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Add the same-file raw startup acceptance gate |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
 | `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
+| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile the reviewer findings and carry forward raw-file startup |
 
 **Resolution Description**
 
-The 256 KiB array and raw slot-load API passed backing, combined bus and
-runtime verification. Direct whole-image startup is in progress. Slot-7
-ProDOS boot and IOMEM disk transfers depend on the firmware and integration work in
-[CPLD-TEST-0001](CPLD-TEST-0001.md).
+The 256 KiB array, development slot loading and direct raw-file startup passed
+backing, combined bus and desktop fixture verification. Awaiting owner review.
+Final programmer-image verification remains in CPLD-ROM-0004. Slot-7 ProDOS
+boot and IOMEM disk transfers remain in [CPLD-TEST-0001](CPLD-TEST-0001.md).

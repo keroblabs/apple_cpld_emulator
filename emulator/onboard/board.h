@@ -105,7 +105,8 @@ typedef struct spi_data_t_
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-void board_startup( void );
+// Pass NULL for the built-in Apple ROM or the path to a flat ROM image.
+int board_startup( const char *rom_path );
 void board_reset( void );
 void board_execute( void );
 void board_video_execute( void );

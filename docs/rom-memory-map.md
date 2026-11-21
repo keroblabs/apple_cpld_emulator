@@ -12,8 +12,8 @@ ticket owns capacity, wiring and programmer readback.
 ## 1. Emulator ROM offsets
 
 The emulator stores all ROM bytes in one 256 KiB array. Offsets below are byte
-indices into that array. At development startup the board clears the array to zero and
-copies the complete original 32 KiB Apple ROM to `0x08000`. Its offset zero
+indices into that array. At development startup the board clears the array to
+zero and copies the complete original 32 KiB Apple ROM to `0x08000`. Its offset zero
 corresponds to Apple address `$8000`. System ROM reads at `$D000–$FFFF` use
 their CPU address as the array index, subject to the language-card switch.
 
@@ -99,3 +99,19 @@ index `0x07000`), its ProDOS metadata at offsets `0x0FC–0x0FF` (CPU
 `$C7FC–$C7FF`), and its expansion at offset `0x800` (array index
 `0x07800`). The firmware ticket owns the metadata byte values and entry
 points. [CPLD-FW-0001](tasks/db/CPLD-FW-0001.md)
+
+## 4. Whole-image emulator startup
+
+```bash
+build/apple_cpld --rom /path/to/flash-image.bin
+```
+
+Raw startup currently expects exactly 262144 bytes, the size of the emulator
+backing. It reads the whole file before copying byte zero to array index zero
+and continuing in physical address order. Missing, short or oversized files
+end startup with an error. Slot loads are disabled in raw mode. RAM, the MMU
+and the disk controller still initialize normally.
+
+The chip part number and wiring determine the final programmer input length
+and high-bank requirements. Test the actual programmer file once those are
+confirmed. [DIP32 flash-image contract](rom-flash-image-contract.md)

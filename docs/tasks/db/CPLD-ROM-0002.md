@@ -85,6 +85,7 @@ CPLD/STM32 ROM service design using these addressed bytes.
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Record the single-image DIP32 and emulator acceptance gate |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
 | `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Specify the 256 KiB backing and each raw slot binary's file and memory offsets |
+| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile rev 3 offsets with the single-file release contract |
 
 **Resolution Description**
 

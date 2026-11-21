@@ -37,8 +37,56 @@ static void capture_oob(uint32_t cpu_addr, uint32_t phys_addr,
     traced_oob = oob;
 }
 
-int main(void)
+static int write_image(const char *path, const uint8_t *bytes, size_t length)
 {
+    FILE *file = fopen(path, "wb");
+    if (!file) {
+        return 0;
+    }
+    size_t written = fwrite(bytes, 1, length, file);
+    return fclose(file) == 0 && written == length;
+}
+
+static void check_raw_file(const char *path, const uint8_t *system_rom,
+                           const uint8_t *slot)
+{
+    static uint8_t image[ROM_BACKING_SIZE + 1];
+    for (size_t i = 0; i < sizeof(image); ++i) {
+        image[i] = (uint8_t)(i ^ (i >> 8) ^ (i >> 16));
+    }
+    memcpy(image, "CPRM", 4);
+
+    check(rom_backing_load_raw_file(path) == -1, "reject a missing raw file");
+    check(write_image(path, image, ROM_BACKING_SIZE - 1), "write short raw fixture");
+    check(rom_backing_load_raw_file(path) == -1, "reject truncated raw file");
+    check(write_image(path, image, sizeof(image)), "write long raw fixture");
+    check(rom_backing_load_raw_file(path) == -1, "reject trailing bytes");
+    check_region(ROM_SYSTEM_BASE, system_rom, ROM_SYSTEM_SIZE);
+    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == 0,
+          "invalid file leaves development mode intact");
+
+    check(write_image(path, image, ROM_BACKING_SIZE), "write complete raw fixture");
+    check(rom_backing_load_raw_file(path) == 0, "load exactly 256 KiB after a failed load");
+    check_region(0, image, ROM_BACKING_SIZE);
+    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == -1, "raw mode rejects a slot overlay");
+
+    check(write_image(path, slot, ROM_SLOT_SIZE), "write a component file as invalid raw input");
+    check(rom_backing_load_raw_file(path) == -1, "raw mode rejects a partial replacement");
+    check_region(0, image, ROM_BACKING_SIZE);
+    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == -1, "failed replacement preserves raw mode");
+
+    rom_backing_init(system_rom);
+    check(rom_backing_load_slot(7, slot, ROM_SLOT_SIZE) == 0,
+          "development initialization restores slot loading");
+}
+
+int main(int argc, char **argv)
+{
+    if (argc != 2) {
+        fprintf(stderr, "Expected a temporary raw ROM output path\n");
+        return 1;
+    }
+
     static uint8_t system_rom[ROM_SYSTEM_SIZE];
     static uint8_t slots[7][4096];
 
@@ -95,6 +143,7 @@ int main(void)
     rom_backing_init(system_rom);
     check(rom_backing_read(0x07000, NULL) == 0, "initialisation clears previous slot loads");
     check(rom_backing_oob_count() == 0, "initialisation clears OOB count");
+    check_raw_file(argv[1], system_rom, slots[0]);
 
     printf("rom_backing: %d checks, %d failures\n", checks, failures);
     return failures != 0;

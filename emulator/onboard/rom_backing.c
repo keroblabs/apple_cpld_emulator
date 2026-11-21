@@ -1,20 +1,56 @@
 #include "rom_backing.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uint8_t rom_space[ ROM_BACKING_SIZE ];
 static rom_backing_trace_fn rom_trace;
 static uint32_t rom_oob_reads;
+static bool raw_file_loaded;
 
 void rom_backing_init( const uint8_t system_rom[ ROM_SYSTEM_SIZE ] )
 {
     memset( rom_space, 0, sizeof( rom_space ) );
     memcpy( &rom_space[ ROM_SYSTEM_BASE ], system_rom, ROM_SYSTEM_SIZE );
     rom_oob_reads = 0;
+    raw_file_loaded = false;
+}
+
+int rom_backing_load_raw_file( const char *path )
+{
+    if( path == NULL )
+    {
+        return -1;
+    }
+
+    FILE *file = fopen( path, "rb" );
+    if( file == NULL )
+    {
+        return -1;
+    }
+
+    // Stage the bytes until the complete file has been read and checked.
+    uint8_t *image = malloc( sizeof( rom_space ) );
+    const bool complete = image &&
+                          fread( image, 1, sizeof( rom_space ), file ) == sizeof( rom_space ) &&
+                          fgetc( file ) == EOF && !ferror( file );
+    fclose( file );
+
+    if( complete )
+    {
+        memcpy( rom_space, image, sizeof( rom_space ) );
+        rom_oob_reads = 0;
+        raw_file_loaded = true;
+    }
+
+    free( image );
+    return complete ? 0 : -1;
 }
 
 int rom_backing_load_slot( int slot, const uint8_t *image, size_t image_len )
 {
-    if( slot < 1 || slot > 7 || image == NULL || image_len != ROM_SLOT_SIZE )
+    if( raw_file_loaded || slot < 1 || slot > 7 || image == NULL || image_len != ROM_SLOT_SIZE )
     {
         return -1;
     }

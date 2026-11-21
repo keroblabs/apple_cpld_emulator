@@ -49,6 +49,7 @@ backing. File offsets follow the physical byte addresses from ROM map rev 3.
 - **2026-11-21 — Design Boundary:** The STM32 still acts as SPI master and owns RTC/serial flash. The DIP32 hardware ROM is a separate, directly addressed hardware resource. Do not conflate it with STM32-side SPI storage.
 - **2026-11-21 — Baseline Test Evidence:** The owner reports the emulator works and `PR#3` / `PR#0` pass with the developer's slot-ROM remapping; this verifies the existing emulator mode, **not** a programmer-ready raw image.
 - **2026-11-21 — Merge decision:** Retained the one-image release and chip readback gates from `22285ea`. The approved raw slot binaries from `174966e` use offset zero for IOSEL, so the earlier `0x6600` and `0x7700` entry offsets are superseded. Apple internal Cx bytes keep their original offsets. The part number, lower IOSEL address wiring, device size/fill policy, reproducible release composition and tests on the actual file remain open.
+- **2026-11-21 — Emulator prerequisite:** CPLD-ROM-0003 added `--rom IMAGE.bin` and verified byte parity, `PR#3`/`PR#0` and the Disk II bootstrap with 256 KiB fixtures. Repeat these checks with the reproducibly composed programmer file after the part and its file length are confirmed.
 
 **Proposed Change**
 
@@ -71,6 +72,7 @@ locking the device file size, high address-line policy and fill.
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Owner release requirements and the DIP32 hardware acceptance gate |
+| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Adopt the rev 3 physical byte offsets and keep final chip validation open |
 
 **Resolution Description**
 

@@ -18,7 +18,7 @@ headers=("-I$onboard" "-I$cpld" "-I$repo_dir/system"
 
 "$CC" -std=c11 -Wall -Wextra -Werror -O2 -I"$onboard" \
     "$tests_dir/test_rom_backing.c" "$onboard/rom_backing.c" -o "$build_dir/test_rom_backing"
-"$build_dir/test_rom_backing"
+"$build_dir/test_rom_backing" "$build_dir/backing.bin"
 
 "$CC" -std=c11 -Wall -Wextra -Werror -O2 "${headers[@]}" \
     -c "$onboard/memory_controller.c" -o "$build_dir/memory_controller.o"
@@ -41,7 +41,7 @@ run_bus_test() {
         "$cpld/rtl_memory_bus.cpp" "$cpld/rtl_interconnect.cpp" "$cpld/rtl_spi_slave.cpp"
 
     printf 'Combined ROM bus (%s)\n' "$tag"
-    "$objdir/VIOU_MMU_tb"
+    "$objdir/VIOU_MMU_tb" "$build_dir/bus-$tag.bin"
 }
 
 run_bus_test default

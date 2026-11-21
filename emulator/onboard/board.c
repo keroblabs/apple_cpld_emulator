@@ -141,13 +141,23 @@ static void board_bus_address( rtl_access_t * state, cpld_data_t * cpld )
     }
 }
 
-void board_startup( void )
+int board_startup( const char *rom_path )
 {
+    if( rom_path )
+    {
+        if( memory_controller_init_raw( rom_path ) != 0 )
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        memory_controller_init();
+    }
+
     rtl_model_reset();
     memset( &cpld_model, 0x00, sizeof( cpld_model ) );
     rtl_model_state_reset( &cpld_model );
-
-    memory_controller_init();
 
     // connect the RTL co-simulation
     rtl_init_65816( &rtl_context );
@@ -177,7 +187,7 @@ void board_startup( void )
 
     cpld_model.MMU.C0XX_N = TRUE;
 
-    //cpld_model.MMU.kbd_strobe = TRUE;
+    return 0;
 }
 
 void board_reset( void )

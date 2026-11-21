@@ -12,7 +12,7 @@ The task rows below give the current status of each ticket; design and implement
 | --- | --- | --- | --- | --- | --- |
 | `CPLD-ROM-0001` | TASK | REVIEW | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
 | `CPLD-ROM-0002` | TASK | REVIEW | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
-| `CPLD-ROM-0003` | TASK | IN_PROGRESS | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
+| `CPLD-ROM-0003` | TASK | REVIEW | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
 | `CPLD-ROM-0004` | TASK | OPEN | Produce and emulate one programmer-ready DIP32 flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
 
 ## CPLD-HW — STM32 / CPLD hardware topology

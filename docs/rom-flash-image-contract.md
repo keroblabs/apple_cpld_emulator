@@ -17,6 +17,11 @@ image and then copy independent 4 KiB slot files. For release verification the
 supplied flat image provides all ROM bytes from startup. Its contents stay
 fixed across software resets and slot-load requests.
 
+`build/apple_cpld --rom IMAGE.bin` currently accepts exactly 256 KiB, the
+capacity of the emulator array. Fixture tests exercise this startup path.
+Confirm the hardware part and its required file length for the actual release.
+[Whole-image startup](rom-memory-map.md#4-whole-image-emulator-startup)
+
 ## 2. Physical byte offsets
 
 The current MMU selects ROM within the lowest 64 KiB of the 256 KiB emulator

@@ -84,14 +84,26 @@ static void board_write_bus( cpld_data_t * cpld, uint32_t cpu_address, uint8_t d
     }
 }
 
+static void memory_controller_init_devices( void )
+{
+    memset( ram_memory, 0xA0, RAM_MEMORY_SIZE );
+    disc_drive_init();
+}
+
 void memory_controller_init( void )
 {
-    // reset main memory
-    memset( &ram_memory[0], 0xA0, RAM_MEMORY_SIZE );
-
     rom_backing_init( apple_rom_bin );
+    memory_controller_init_devices();
+}
 
-    disc_drive_init();
+int memory_controller_init_raw( const char *path )
+{
+    if( rom_backing_load_raw_file( path ) != 0 )
+    {
+        return -1;
+    }
+    memory_controller_init_devices();
+    return 0;
 }
 
 int memory_controller_load_slot_rom( int slot, const uint8_t *image, size_t image_len )

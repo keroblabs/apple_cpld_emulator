@@ -13,6 +13,10 @@
 #include "sdl_main.h"
 
 #include "keyboard_controller.h"
+#include "rom_backing.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -29,8 +33,19 @@ static void video_thread_handler( void )
     }
 }
 
-int main( void )
+int main( int argc, char **argv )
 {
+    const char *rom_path = NULL;
+    if( argc == 3 && strcmp( argv[1], "--rom" ) == 0 )
+    {
+        rom_path = argv[2];
+    }
+    else if( argc != 1 )
+    {
+        fprintf( stderr, "Usage: %s [--rom IMAGE.bin]\n", argv[0] );
+        return EXIT_FAILURE;
+    }
+
     rtl_model_init();
     timer_Init();
     
@@ -42,7 +57,18 @@ int main( void )
 
     // initialize board
     input_drv_init();
-    board_startup();
+    if( board_startup( rom_path ) != 0 )
+    {
+        fprintf( stderr, "Cannot load raw ROM '%s'. Expected a readable %u-byte file.\n",
+                 rom_path, ROM_BACKING_SIZE );
+        lcd_driver_deinit();
+        heap_mngr_deinit();
+        return EXIT_FAILURE;
+    }
+    if( rom_path )
+    {
+        printf( "Loaded raw ROM '%s' (%u bytes)\n", rom_path, ROM_BACKING_SIZE );
+    }
     keyboard_controller_init();
 
     video_thread = tthread_create( video_thread_handler );
@@ -60,4 +86,5 @@ int main( void )
     tthread_sleep_ms( 1000 );
     lcd_driver_deinit();
     heap_mngr_deinit();
+    return EXIT_SUCCESS;
 }

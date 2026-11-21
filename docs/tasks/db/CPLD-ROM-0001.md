@@ -105,6 +105,7 @@ ROM and these windows share the 256 KiB address space specified in
 | `mmu-rom-analysis` | `2cdcba6` | `CHANGES_REQUESTED` | Independent re-review of `7e1df68`, including ROM1-R4 and the owner's Applesoft test |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
 | `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Decode the raw 4 KiB slot windows and test both MMU builds and the combined bus |
+| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile ROM1-R4 and preserve the owner and reviewer evidence |
 
 **Resolution Description**
 

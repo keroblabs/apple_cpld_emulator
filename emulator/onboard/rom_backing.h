@@ -16,9 +16,14 @@ extern "C" {
 // Clear the backing and copy the complete Apple ROM to ROM_SYSTEM_BASE.
 void rom_backing_init( const uint8_t system_rom[ ROM_SYSTEM_SIZE ] );
 
+// Load one complete raw image in physical address order. A successful load
+// disables slot writes until rom_backing_init selects development mode again.
+// Failed opens, reads or length checks return -1 and preserve the backing.
+int rom_backing_load_raw_file( const char *path );
+
 // Copy one raw binary into slot * ROM_SLOT_SIZE. IOSEL is at +0x000 and
 // IOSTB at +0x800. A valid load replaces the whole slot. An invalid slot
-// (outside 1..7), pointer or length returns -1 before modifying the backing.
+// (outside 1..7), pointer or length returns -1, as does raw-file mode.
 int rom_backing_load_slot( int slot, const uint8_t *image, size_t image_len );
 
 // Check the physical address against the 256 KiB backing. Out-of-range reads

@@ -5,6 +5,7 @@
 #include "rom_backing.h"
 #include "rtl_model.h"
 #include "ram_bus_hw.h"
+#include <fstream>
 
 extern "C" {
 #include "disc_drive.h"
@@ -81,8 +82,56 @@ static void expect_apple_rom(cpld_data_t &cpld, uint16_t cpu)
     expect_rom(cpld, cpu, cpu, apple_rom_bin[cpu - 0x8000], 0);
 }
 
-int main(void)
+static void verify_raw_image(cpld_data_t &cpld, const char *path)
 {
+    static uint8_t bytes[ROM_BACKING_SIZE];
+    for (size_t i = 0; i < sizeof(bytes); ++i) {
+        bytes[i] = (uint8_t)(0xA5 ^ i ^ (i >> 8) ^ (i >> 16));
+    }
+
+    std::ofstream output(path, std::ios::binary);
+    output.write(reinterpret_cast<const char *>(bytes), sizeof(bytes));
+    output.close();
+    const bool loaded = output && memory_controller_init_raw(path) == 0;
+    check(loaded, "initialize the memory controller directly from the raw image file");
+    if (!loaded) {
+        return;
+    }
+
+    rtl_model_reset();
+    cpld = {};
+    rtl_model_state_reset(&cpld);
+    check(memory_controller_load_slot_rom(6, bytes, ROM_SLOT_SIZE) == -1,
+          "memory controller rejects overlays on the raw file");
+
+    access(cpld, 0xC00B, false); // Use the external slot 3 bytes for the full slot sweep.
+    for (unsigned slot = 1; slot <= 7; ++slot) {
+        const uint16_t cpu_entry = 0xC000 + slot * 0x100;
+        const uint32_t base = slot * 0x1000;
+        for (uint16_t offset = 0; offset < 0x100; ++offset) {
+            expect_rom(cpld, cpu_entry + offset, base + offset, bytes[base + offset], 1);
+        }
+        for (uint16_t offset = 0; offset < 0x800; ++offset) {
+            const uint32_t phys = base + 0x800 + offset;
+            expect_rom(cpld, 0xC800 + offset, phys, bytes[phys], 1);
+        }
+        expect_rom(cpld, 0xC800, 0x00800, bytes[0x00800], 1);
+    }
+
+    access(cpld, 0xC007, false); // Select the internal Cx ROM.
+    for (unsigned cpu = 0xC100; cpu <= 0xFFFF; ++cpu) {
+        expect_rom(cpld, cpu, cpu, bytes[cpu], 0);
+    }
+    check(rom_backing_oob_count() == 0, "all raw-image CPU reads are in bounds");
+}
+
+int main(int argc, char **argv)
+{
+    if (argc != 2) {
+        fprintf(stderr, "Expected a temporary raw ROM output path\n");
+        return 1;
+    }
+
     cpld_data_t cpld{};
     rtl_model_init();
     rtl_model_reset();
@@ -163,6 +212,8 @@ int main(void)
     check(memory_controller_access(&cpld, 0xD123, true, 0) == 0 &&
           last_trace.out_of_bounds && rom_backing_oob_count() == 1,
           "memory controller exposes an out-of-bounds ROM read");
+
+    verify_raw_image(cpld, argv[1]);
 
     printf("ROM bus: %u checks, %u failures\n", checks, failures);
     return failures != 0;
