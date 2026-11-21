@@ -15,6 +15,11 @@ printf 'module MMU; endmodule\n' > "$fixture/rtl_MMU/MMU.v"
 printf 'module MMU_part; endmodule\n' > "$fixture/rtl_MMU/MMU_part.v"
 printf 'module IOU; endmodule\n' > "$fixture/rtl_IOU/IOU.v"
 printf 'module IOU_part; endmodule\n' > "$fixture/rtl_IOU/IOU_part.v"
+# MMU_io in the real project instantiates these reusable hardware helpers,
+# which currently reside in rtl_IOU rather than rtl_MMU.
+for shared in TTL_ls138_2 TTL_ls259 IOU_exp16 IOU_toggle_d; do
+    printf 'module %s; endmodule\n' "$shared" > "$fixture/rtl_IOU/$shared.v"
+done
 printf 'STALE EDIF\n' > "$fixture/rtl_MMU/MMU.edif"
 printf 'not a physical top\n' > "$fixture/rtl_IOU_MMU_TB.v"
 
@@ -42,6 +47,11 @@ dst=${dst#fake-rtl:}
 mkdir -p "$dst"
 if [[ " $* " == *' --include='* ]]; then
     for x in "$src"/*.v; do [[ -f $x ]] && cp "$x" "$dst/"; done
+elif [[ " $* " == *' -- '* ]]; then
+    for x in "$@"; do
+        [[ "$x" == "$dst" || "$x" == -- || "$x" == -* ]] && continue
+        if [[ -f "$x" ]]; then cp -a "$x" "$dst/"; fi
+    done
 else
     cp -a "$src"/. "$dst"/
 fi
@@ -57,7 +67,11 @@ script=$4
 if grep -q '^hierarchy -check -top MMU$' "$script"; then
     top=MMU
     grep -q 'input/MMU_part.v' "$script"
-    ! grep -q 'IOU' "$script"
+    ! grep -q 'input/IOU.v' "$script"
+    ! grep -q 'input/IOU_spi_iface.v' "$script"
+    for shared in TTL_ls138_2 TTL_ls259 IOU_exp16 IOU_toggle_d; do
+        grep -q "input/$shared.v" "$script"
+    done
 else
     top=IOU
     grep -q 'input/IOU_part.v' "$script"
@@ -96,7 +110,7 @@ mapfile -t dirs < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type
 [[ -f ${dirs[0]}/MMU.pin ]]
 [[ $(cat "${dirs[0]}/MMU.edif") == 'edif for MMU' ]]
 [[ ! -f ${dirs[0]}/IOU.jed ]]
-note 'MMU: reads all MMU files, ignores stale EDIF, fits ASV, copies logs/artifacts'
+note 'MMU: reads MMU sources plus four shared helpers, excludes IOU top, fits ASV and returns artifacts'
 
 CPLD_IOU_DEFINES=IOU_COMPLETE run iou
 mapfile -t ios < <(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU.*')
@@ -109,8 +123,20 @@ CPLD_MMU_DEFINES=FULL_MMU_ADDR run mmu
 grep -ql -- '-DFULL_MMU_ADDR' "$fixture"/build/rtl-cpld/MMU.*/synth.ys
 note 'MMU: optional FULL_MMU_ADDR included in synthesis'
 
+CPLD_MMU_DEFINES=SPK_IN_MMU run mmu
+grep -ql -- '-DSPK_IN_MMU' "$fixture"/build/rtl-cpld/MMU.*/synth.ys
+note 'MMU: SPK_IN_MMU variant includes shared IOU_toggle_d helper'
+
+# Missing dependencies must fail loudly rather than producing a silently
+# incomplete netlist. Restore the file for subsequent all/failure tests.
+mv "$fixture/rtl_IOU/TTL_ls259.v" "$fixture/rtl_IOU/TTL_ls259.v.hidden"
+fail mmu
+grep -q 'Missing shared MMU dependency.*TTL_ls259.v' "$test_root/last.log"
+mv "$fixture/rtl_IOU/TTL_ls259.v.hidden" "$fixture/rtl_IOU/TTL_ls259.v"
+note 'MMU: missing cross-directory shared module fails clearly'
+
 run all
-[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU.*' | wc -l) == 3 ]]
+[[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'MMU.*' | wc -l) == 4 ]]
 [[ $(find "$fixture/build/rtl-cpld" -mindepth 1 -maxdepth 1 -type d -name 'IOU.*' | wc -l) == 2 ]]
 note 'all: two independent builds; non-overwriting per-run output directories'
 

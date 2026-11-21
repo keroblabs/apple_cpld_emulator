@@ -36,6 +36,7 @@ Explicit build variants when required by the eventual pin/interface contract:
 ```bash
 CPLD_MMU_DEFINES=FULL_MMU_ADDR ./scripts/build-cpld.sh mmu
 CPLD_IOU_DEFINES=IOU_COMPLETE ./scripts/build-cpld.sh iou
+CPLD_MMU_DEFINES=SPK_IN_MMU ./scripts/build-cpld.sh mmu
 ```
 
 The default build has no extra defines. **Do not assume the default variant is the approved physical PCB configuration.** `FULL_MMU_ADDR` changes the MMU address pin count; `IOU_COMPLETE` changes IOU exported pins. Ticket HW-0004 must document which variants were fitted and approved. The driver does not set physical pin assignments or timing constraints; it preserves whatever pin annotations are present in the top module and reports what the fitter chooses.
@@ -44,7 +45,7 @@ The default build has no extra defines. **Do not assume the default variant is t
 
 ## How it works
 
-For *each* selected top, the driver creates an isolated remote `~/rtl-build/src/cpld.<TOP>.<random>/`, rsyncs only `rtl_<TOP>/*.v`, and streams `scripts/remote-fit-cpld.sh` over SSH. The remote helper creates `synth.ys` reading every module, explicitly selects the top, maps the Atmel logic primitives, generates EDIF using `write_edif -lsbidx`, and calls the upstream fitter with explicit `-d ATF1508ASV -p PLCC84 -s 15`.
+For *each* selected top, the driver creates an isolated remote `~/rtl-build/src/cpld.<TOP>.<random>/` and transfers Verilog files for that physical design. For the MMU, the source set also includes four shared helper modules currently stored under `rtl_IOU/`: `TTL_ls138_2.v`, `TTL_ls259.v`, `IOU_exp16.v` and `IOU_toggle_d.v` (the latter is used by the `SPK_IN_MMU` variant). These are *RTL dependencies*, not the IOU CPLD top: `IOU.v`, its SPI slave and the combined testbench are not transferred for an MMU build. Missing shared files cause an explicit failure. The script then streams `scripts/remote-fit-cpld.sh` over SSH. The remote helper creates `synth.ys` reading every module, explicitly selects the top, maps the Atmel logic primitives, generates EDIF using `write_edif -lsbidx`, and calls the upstream fitter with explicit `-d ATF1508ASV -p PLCC84 -s 15`.
 
 Outputs are copied into unique ignored directories such as:
 

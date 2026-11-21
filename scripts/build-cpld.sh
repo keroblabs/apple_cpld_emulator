@@ -51,9 +51,22 @@ mkdir -p "$root/build/rtl-cpld"
 
 build_one() {
     local top=$1 source_dir="$root/rtl_$1" defines remote_dir result_dir run_cmd rc=0
+    local shared_name shared_path
+    local -a shared_sources=()
     [[ -f "$source_dir/$top.v" ]] || { echo "Missing $source_dir/$top.v" >&2; return 2; }
     if [[ "$top" == MMU ]]; then
         defines=${CPLD_MMU_DEFINES:-}
+        # MMU_io instantiates these shared decoders/latches, which currently
+        # live in rtl_IOU. Include only these modules, not the IOU top or SPI.
+        # IOU_toggle_d is needed when SPK_IN_MMU is defined.
+        for shared_name in TTL_ls138_2 TTL_ls259 IOU_exp16 IOU_toggle_d; do
+            shared_path="$root/rtl_IOU/$shared_name.v"
+            [[ -f "$shared_path" ]] || {
+                echo "Missing shared MMU dependency: $shared_path" >&2
+                return 2
+            }
+            shared_sources+=("$shared_path")
+        done
     else
         defines=${CPLD_IOU_DEFINES:-}
     fi
@@ -69,10 +82,14 @@ build_one() {
     }
     ssh -o BatchMode=yes "$host" "mkdir -p '$remote_dir/input'"
 
-    # Only Verilog from the chosen physical top; excludes historical EDIF/JED,
-    # verification, and the combined Verilator testbench by construction.
+    # The chosen CPLD top is the only physical design; the MMU additionally
+    # imports four specific shared helper modules from rtl_IOU.
+    # Historical EDIF/JED, verification and the Verilator top are excluded.
     rsync -a --include='*.v' --exclude='*' \
         "$source_dir/" "$host:$remote_dir/input/"
+    if ((${#shared_sources[@]} > 0)); then
+        rsync -a -- "${shared_sources[@]}" "$host:$remote_dir/input/"
+    fi
     result_dir=$(mktemp -d "$root/build/rtl-cpld/${top}.XXXXXXXX")
 
     # shell-escaped arguments for ssh's remote shell. The build script itself
