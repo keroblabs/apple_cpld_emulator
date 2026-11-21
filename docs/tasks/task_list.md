@@ -18,7 +18,7 @@ The task rows below give the current status of each ticket; design and implement
 | `CPLD-ROM-0002` | TASK | RESOLVED | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
 | `CPLD-ROM-0003` | TASK | RESOLVED | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
 | `CPLD-ROM-0004` | TASK | REVIEW | Produce and emulate one programmer-ready DIP32 flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
-| `CPLD-ROM-0005` | TASK | OPEN | Retarget ROM image/export to 128 KiB SST39VF010-70 | M1 — ROM mapping | [Details](db/CPLD-ROM-0005.md) |
+| `CPLD-ROM-0005` | TASK | IN_PROGRESS | Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70 | M1 — ROM mapping | [Details](db/CPLD-ROM-0005.md) |
 
 ## CPLD-HW — STM32 / CPLD hardware topology
 

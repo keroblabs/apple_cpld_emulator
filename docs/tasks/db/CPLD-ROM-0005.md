@@ -1,7 +1,7 @@
 # CPLD-ROM-0005 — Retarget the ROM image and physical interface to 128 KiB SST39VF010-70
 
 **ID:** `CPLD-ROM-0005`  
-**Status:** `OPEN`  
+**Status:** `IN_PROGRESS`\
 **Title:** Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70
 
 **Description**
@@ -134,6 +134,7 @@ The existing owner verification on the current 256 KiB software is **accepted ba
 - **2026-11-21 — Source review:** Current `rom_backing.h` has `ROM_BACKING_SIZE=0x40000`; `rom_backing_init` zero-fills and loads all current content below 0x10000; the Verilog maps ROM addresses below 0x10000; `source/app_emulator.c` emits the backing on `-w`. Expected minimal software change is a reduced backing/export size, test fixtures and documentation. Hardware concerns above are separately blocking for actual flash deployment.
 - **2026-11-21 — Datasheet review:** Microchip VF010 is 128K×8, 70 ns, low voltage, **PLCC32 or TSOP32**. The suffix and exact adapter need confirmation: **do not assume actual DIP32 packaging**; do not connect 5 V signals to the low-voltage flash unprotected.
 - **2026-11-21 — Verification baseline:** Owner previously ran the emulator, `PR#3`/`PR#0`, and all six card slot ROM patterns successfully on the 256 KiB implementation. These tests should be repeated for ROM-0005 with the new 128 KiB export.
+- **2026-11-21 — Status change:** `OPEN → IN_PROGRESS` on `mmu-rom-analysis`. Capture exports from the approved `f4da91d` sources and compare their lower 64 KiB against the resized backing using the same compiled inputs. Verify ROM A16 and auxiliary RAM independently. Review the selected device pinout and timing for the hardware handoff.
 
 **Proposed Change**
 
