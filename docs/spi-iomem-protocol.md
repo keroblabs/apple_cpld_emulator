@@ -107,7 +107,40 @@ At a CS-high rising SPI clock edge, `IOU_spi_iface.v` loads its status shift reg
 
 `rtl_spi_slave.cpp` supplies a CS-high reset/load clock, thirteen CS-low data bits, a trailing clock and CS closing. The RTL shifts on rising SPI edges; the emulator captures MISO in the low half-period before those shifts. The current implementation advances at four simulation ticks per SPI half-period, driven by CPU-access scheduling rather than an independent wall clock. Preserve this edge behaviour until a dedicated RTL waveform test proves an alternative equivalent.
 
-### 4.1 Software queue semantics
+### 4.1 GPIO / bit-banged timing contract
+
+The verified master contract is defined by signal edges, not by an STM32 SPI
+peripheral mode:
+
+1. SCK idles low with CS high. Keep CS high through at least one rising SCK
+   edge; the IOU loads the five status bits and resets its frame receiver on
+   that edge.
+2. Pull CS low while SCK is low. Drive MOSI for each bit during the low phase,
+   keep it stable through the rising edge, and send the 13-bit word MSB first:
+   five selector bits followed by eight payload bits.
+3. The master samples MISO during the low phase immediately before each rising
+   edge. The IOU shifts on rising edges. The first five returned bits are the
+   status flags; the next eight are the mailbox byte for selector 0 or `0xFF`
+   for other selectors.
+4. After the thirteenth data rising edge, the selected pending control is
+   active low until one trailing rising edge advances the frame to its idle
+   terminal count. Keep CS low for that trailing edge, then raise CS. The
+   trailing edge carries no payload.
+5. If CS aborts a frame, the pending controls become inactive immediately; the
+   receiver state resets on the next rising edge while CS is high. Start the
+   next transaction with the preload edge. Additional clocks after the
+   trailing edge are ignored until that preload.
+
+The emulator master uses four scheduler ticks per SCK half-period (eight per
+complete SCK period), drives MOSI throughout each low/high pair, and captures
+MISO at the end of the low phase. That is the tested digital interval; the
+scheduler has no physical time unit, so it does not establish a maximum SCK in
+hertz, electrical setup/hold time, or a hardware timing margin. The SPI pending
+controls are sampled by PHI_0-clocked mailbox logic; the integrated Verilator
+regression interleaves those clocks, while physical clock-domain timing remains
+unmeasured.
+
+### 4.2 Software queue semantics
 
 Current `spi_data_t` (in `emulator/onboard/board.h`):
 
