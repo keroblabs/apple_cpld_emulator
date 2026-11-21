@@ -2,15 +2,15 @@
 
 **Status:** Initial hard-disk programme tickets opened 2026-11-20 on `rtl-rework`.  
 **Methodology:** [Task and Bug Tracking Methodology](bug-tracking-methodology.md).  
-**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service. The STM32 remains the sole SPI master and owns the RTC and serial flash. A separate SST39VF010-70 serves CPU ROM from one raw flash binary. [Flash image contract](../rom-flash-image-contract.md)
+**Scope:** Slot7 ProDOS firmware → IOMEM 16-bit block protocol → onboard disk-image service. The STM32 remains the sole SPI master and owns the RTC and hard-disk serial SPI flash. A separate **PLCC32 SST39VF010-70-4I-NHE** parallel flash serves CPU ROM from one raw 128 KiB image. [Flash image contract](../rom-flash-image-contract.md)
 
 The task rows below give the current status of each ticket; design and implementation approvals are tracked in each individual ticket. See each ticket's detailed dependencies and acceptance criteria. Core workstreams: **M1** ROM mapping and hardware ROM-read strategy → **M2** slot7 ProDOS firmware; **M3** IOMEM protocol and hard-disk service can proceed alongside M1/M2 → **M4** image integration and ProDOS boot verification.
 
-The **128 KiB SST39VF010-70** image uses the approved lower 64 KiB ROM map
+The **128 KiB SST39VF010-70-4I-NHE** image uses the approved lower 64 KiB ROM map
 and reserves the zero-filled upper 64 KiB. The package, 3.3 V interface,
 timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPLD-ROM-0005.md)
 
-**2026-11-21 review update:** CPLD-ROM-0001 through CPLD-ROM-0005 are **RESOLVED as software design/implementation tasks**, including the 128 KiB SST39VF010-70 image and byte-exact emulator export. The original owner `PR#3`/`PR#0` and slot-pattern checks are recorded; the developer repeated integration tests for the new image. **CPLD-HW-0001 remains OPEN** for physical chip, adapter, address/voltage/timing/bus ownership and complete flash programming/readback. **CPLD-FW-0001 / CPLD-TEST-0001 remain OPEN** for populated slot7 ProDOS/IOMEM. RESOLVED is not CLOSED; PR integration/merge remains owner-controlled.
+**2026-11-21 review update:** CPLD-ROM-0001 through CPLD-ROM-0005 are **RESOLVED as software design/implementation tasks**, including the 128 KiB SST39VF010-70 image and byte-exact emulator export. The original owner `PR#3`/`PR#0` and slot-pattern checks are recorded; the developer repeated integration tests for the new image. **CPLD-HW-0001 is RESOLVED as a decision-only architecture record**: STM32 controls disk serial flash; the CPU ROM is the PLCC32 `-4I-NHE` part and uses the approved 128 KiB image. **CPLD-HW-0002 and CPLD-HW-0003 are OPEN** for SRAM/flash RD/WR RTL+emulator signals and a SPI-slave logic/timing review, respectively. Physical board voltage/pinout/timing and full programmed-chip readback **remain unverified and need a separate board-validation ticket**. **CPLD-FW-0001 / CPLD-TEST-0001 remain OPEN** for populated slot7 ProDOS/IOMEM. RESOLVED is not CLOSED; PR integration/merge remains owner-controlled.
 
 ## CPLD-ROM — ROM mapping and flash layout
 
