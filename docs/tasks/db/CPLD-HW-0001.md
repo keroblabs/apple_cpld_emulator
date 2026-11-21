@@ -40,6 +40,8 @@ regulated nominal 3.3 V rail. The first 64 KiB serves the CPU and the upper
 - **2026-11-21 — Device selection supersession:** The prior 256 KiB, 18-bit note is historical. Owner now requires SST39VF010-70 **128 KiB**, A0–A16, with A16 low on current ROM cycles and no banking. Validate 70 ns timing, CE#/OE#/WE#, PLCC/TSOP-to-DIP32 issue, and 3.3 V versus 5 V electrical compatibility. Link review and eventually physical readback to CPLD-ROM-0005; do not claim physical approval yet.
 - **2026-11-21 — Reference interface:** ROM-0005 supplies the device pin map, A16 strap, low-address selection, voltage and bus timing requirements below. The exact package, socket netlist, translator, measured timing and chip readback still require hardware evidence.
 
+- **2026-11-21 — Accepted software handoff / explicit hardware ownership:** The reviewer approved the emulator image/export software in CPLD-ROM-0004 and ROM-0005 and moved those tickets to RESOLVED. **All physical hardware obligations remain assigned to this OPEN ticket.** In particular, obtain/identify full SST39VF010-70 order code and PLCC32/TSOP32-to-DIP32 mechanical solution (if required), verify voltage domain/level shifting and power sequencing, flash A16=0 strap, real IOSEL lower-address mux, CE#/OE#/WE# grants and bus high-Z ownership including optional slot6, CPU access/disable timing, and programmer compatibility. Program **exactly the 131072-byte `-w` output** and compare every byte of whole-chip readback and SHA-256; record part ID, adapter/pinout, PCB revision, programmer settings, firmware source commit and binary digest. This is **not completed by the emulator tests**. A populated slot7 ProDOS/IOMEM fixture is separately required by CPLD-TEST-0001.
+
 **Proposed Change**
 
 ### Parallel flash integration
@@ -155,7 +157,7 @@ especially on internal/card `$C6xx` transitions. The limits are from
 ### Single-image acceptance gate (added 2026-11-21)
 
 - [ ] The purchased SST39VF010-70 suffix, footprint or adapter, voltage interfaces, address mux and bus arbitration are verified on the target.
-- [ ] Program the SST39VF010-70 and compare the full 131072-byte readback byte for byte and by SHA-256. Record device ID, programmer settings, source revision and image hash. [CPLD-ROM-0004](CPLD-ROM-0004.md)
+- [ ] Program the SST39VF010-70 using the unchanged `-w` export and compare the full 131072-byte chip readback byte for byte and by SHA-256. Record device ID, complete part suffix, adapter/PCB version, programmer settings, source revision and exported-image hash. Software export is accepted under [CPLD-ROM-0004](CPLD-ROM-0004.md) and [CPLD-ROM-0005](CPLD-ROM-0005.md); **physical readback is exclusively this ticket's unresolved gate**.
 
 **Commits**
 

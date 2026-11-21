@@ -69,5 +69,4 @@ parallel flash serves the CPU via the CPLD memory bus.
 3. Compare MMU-driven reads from that startup backing with the emitted bytes. Probe IOSEL, IOSTB including CFFF, the reserved regions, internal Apple ROM and reset vectors. Verify Apple startup, Applesoft `PR#3`/`PR#0` and the floppy bootstrap. Run slot-7 ProDOS and a byte-exact IOMEM transfer when its firmware and disk service are available.
 4. Program the SST39VF010-70 using that same file and compare the entire 131072-byte readback. Record the device, programmer parameters, binary hash, source commit and results.
 
-Hardware readiness requires all four stages. Physical programming and
-complete chip readback are tracked in [CPLD-ROM-0004](tasks/db/CPLD-ROM-0004.md).
+Software image composition and parity are accepted in [CPLD-ROM-0004](tasks/db/CPLD-ROM-0004.md) and [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md). **Hardware readiness still requires all four stages.** Physical programming, complete chip readback, electrical and timing verification are **OPEN** in [CPLD-HW-0001](tasks/db/CPLD-HW-0001.md); populated slot7 ProDOS/IOMEM runs remain in [CPLD-TEST-0001](tasks/db/CPLD-TEST-0001.md).

@@ -1,8 +1,8 @@
-# CPLD-ROM-0004 — Produce and emulate one programmer-ready flash image
+# CPLD-ROM-0004 — Generate and verify one flash image in the emulator
 
 **ID:** `CPLD-ROM-0004`  
-**Status:** `REVIEW`\
-**Title:** Produce and emulate one programmer-ready flash image
+**Status:** `RESOLVED`  
+**Title:** Generate and verify one flash image in the emulator
 
 **Description**
 
@@ -15,7 +15,7 @@ preserves the approved layout. [128 KiB retarget](CPLD-ROM-0005.md)
 
 - Kind: TASK
 - Category: `CPLD-ROM`
-- Milestone: M1 — ROM mapping; hardware-ready acceptance gate for M2/M4
+- Milestone: M1 — ROM mapping; compiled ROM image generation and software verification
 - Branch baseline: `mmu-rom-analysis`, 2026-11-21
 - Dependencies: [`CPLD-ROM-0001`](CPLD-ROM-0001.md), [`CPLD-ROM-0002`](CPLD-ROM-0002.md), [`CPLD-ROM-0003`](CPLD-ROM-0003.md), [`CPLD-ROM-0005`](CPLD-ROM-0005.md) for the retarget and [`CPLD-HW-0001`](CPLD-HW-0001.md) for the physical interface
 - Binding architectural reference: [`docs/rom-flash-image-contract.md`](../../rom-flash-image-contract.md)
@@ -42,8 +42,8 @@ lines and CE#/OE#/WE# before programming. The full readback covers both
 1. Compile `apple_rom_bin[]` and the six 4096-byte slot arrays. Document the source revision, populated slots and their `SLOTn_ROM` definitions.
 2. Start the emulator with `-w IMAGEFILE` to write exactly 131072 bytes from the populated backing. Startup without arguments creates no file.
 3. Compare the exported bytes with the compiled inputs, whole backing and real MMU-driven reads. Probe the empty slots, IOSEL/IOSTB, CFFF, Apple internal ROM and system vectors.
-4. Compare independent builds and SHA-256. Verify `PR#3`/`PR#0` and the floppy bootstrap during a run that writes the image. Repeat with the populated release build including slot-7 ProDOS/IOMEM when available.
-5. Program the exported file and compare the full programmer readback byte for byte. Record the part, wiring, programmer settings and tested image digest.
+4. Compare independent builds and SHA-256. Verify `PR#3`/`PR#0` and the floppy bootstrap during a run that writes the image.
+5. **External acceptance:** the populated slot-7 ProDOS/IOMEM release test is owned by [CPLD-TEST-0001](CPLD-TEST-0001.md), while physical programming and complete chip readback are owned by [CPLD-HW-0001](CPLD-HW-0001.md). These are not part of ROM-0004's software-resolution gate.
 
 ### Independent re-review — 2026-11-21 (approved 256 KiB baseline)
 
@@ -72,20 +72,29 @@ and verifies lower-bank parity with this approved baseline.
 - **2026-11-21 — Owner scope change:** SST39VF010-70 (128 KiB) replaces the 256 KiB flash-size assumption. CPLD-ROM-0005 owns emulator resize/export/tests and required physical-voltage/package review. Preserve prior 256 KiB development evidence in historical notes; new ROM-0004 acceptance image size must follow ROM-0005 once implemented. Keep physical programming/readback pending.
 - **2026-11-21 — Flash contract update:** The 131072-byte export preserves the approved lower-bank bytes and zero-fills the reserved upper bank. The reference connections and timing are recorded in CPLD-HW-0001. Proceed to review with the software evidence in CPLD-ROM-0005. Physical programming/readback and the populated slot-7 acceptance gates remain open.
 
+- **2026-11-21 — Independent review and scope split:** Source-reviewed the compiled ROM backing, `-w` export path, checked 128 KiB size and accompanying tests. The developer recorded repeatable full-file comparisons and emulator boot/slot-pattern tests; owner also verified `PR#3`/`PR#0` and per-slot ROM patterns in the preceding configuration. No source-code rework requested. **Approved the software image composition and export deliverable.** Transferred physical flash programming, device/package/voltage/wiring/timing and complete-chip readback to CPLD-HW-0001, and populated slot7 ProDOS/IOMEM to CPLD-FW-0001 and CPLD-TEST-0001. This is a scope clarification, not a claim those tests passed.
+- **2026-11-21 — Status Change:** `REVIEW → RESOLVED` for the emulator image-export deliverable; requires owner merge/integration before CLOSED.
+
 **Proposed Change**
 
 Use the emulator's `-w` export of its compiled startup image as the target
 programmer file. Verify the selected package, lower-bank wiring and full
 chip readback. [Flash image contract](../../rom-flash-image-contract.md)
 
-### Acceptance criteria
+### Software acceptance criteria (scope resolved 2026-11-21)
 
-- [x] `-w IMAGEFILE` writes the single headerless 128 KiB backing, and a no-argument run creates no file.
-- [x] Default and overridden builds export the expected bytes. The MMU fetch tests and desktop boot probes use the backing emitted in their run.
-- [x] The default image reproduces across separate builds. Fixture lengths, hashes and test results are recorded.
-- [ ] The SST39VF010-70 package, address and data wiring, and programmer are confirmed for the exact 128 KiB file.
-- [ ] The populated release build passes its slot-7 ProDOS and IOMEM acceptance tests. [CPLD-TEST-0001](CPLD-TEST-0001.md)
-- [ ] Programming and complete chip readback match the exported file byte for byte.
+- [x] The emulator's `-w IMAGEFILE` exports the one headerless **131072-byte** binary from its compiled startup backing; a no-argument run does not create a ROM file.
+- [x] Default and all six overridden slot builds produce byte-accurate exports and execute from those very same compiled bytes, including IOSEL, IOSTB, CFFF and original Apple ROM.
+- [x] Independent-build exports are reproducible, source-byte and whole-file comparisons pass, and a forced short write leaves the prior export intact.
+- [x] Existing Apple IIe boot, `PR#3`/`PR#0`, slot-pattern and slot6 Disk II bootstrap developer tests are recorded, with earlier owner manual verification preserved.
+- [x] ROM-0005 retarget results are accepted: 128 KiB output, first 64 KiB parity, 64 KiB reserved zero fill, no new ROM bank select.
+
+### External hardware and firmware acceptance (transferred, not completed)
+
+- [ ] **CPLD-HW-0001:** confirm the SST39VF010-70 exact suffix/PLCC32 or TSOP32 adapter or footprint, 3.3 V electrical interface, address mux and A16 strap, timing, CE#/OE#/WE#, programming and **full 131072-byte chip readback** against the exported hash.
+- [ ] **CPLD-FW-0001 / CPLD-TEST-0001:** implement populated slot7 ProDOS firmware, IOMEM disk service, and end-to-end boot/512-byte block tests using the corresponding `-w` output.
+
+**Resolution boundary:** ROM-0004 produces a deterministic **programmer-input file**, not evidence that a physical flash has yet been programmed or that the future ProDOS firmware runs. Hardware/firmware obligations have not been waived; their owning tickets remain OPEN.
 
 **Commits**
 
@@ -96,11 +105,10 @@ chip readback. [Flash image contract](../../rom-flash-image-contract.md)
 | `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Emulator prerequisite for direct raw-file tests with the programmer image |
 | `mmu-rom-analysis` | `562ce53` | `APPROVED` | Record direct export of the compiled startup image |
 | `mmu-rom-analysis` | `8df4a4f` | `APPROVED` | Export the populated backing with `-w` and record byte parity and boot evidence |
-| `mmu-rom-analysis` | `cf47ae7` | `UNREVIEWED` | Apply the 128 KiB export and readback contract from CPLD-ROM-0005 |
+| `mmu-rom-analysis` | `cf47ae7` | `APPROVED` | Apply the 128 KiB export and readback contract from CPLD-ROM-0005 |
 
 **Resolution Description**
 
-The compiled-ROM workflow was approved on 2026-11-21. The 128 KiB retarget
-and regression evidence are in [CPLD-ROM-0005](CPLD-ROM-0005.md) for review.
-This ticket stays in REVIEW for physical programming and complete readback
-and for the populated slot-7 ProDOS/IOMEM release.
+**RESOLVED (software), 2026-11-21.** The compiled-in Apple/slot ROM arrays initialise the same 128 KiB backing from which the emulator executes, and `-w IMAGEFILE` exports precisely those bytes in one reproducible programmer-input file. The existing `PR#3`/`PR#0`, slot-pattern, Disk II and export-parity evidence was reviewed and accepted. The original 256 KiB results are preserved in Notes as historical evidence; the approved target image is now 128 KiB. No implementation changes were necessary in this review.
+
+**Excluded from this resolution:** actual SST39VF010-70 purchase/package/adapter verification, electrical and timing validation, flash programming and **131072-byte readback** (CPLD-HW-0001), and the *future populated* ProDOS/IOMEM image integration (CPLD-FW-0001 / CPLD-TEST-0001). These gates are still open and must not be reported as tested. Ticket remains pending merge/integration for CLOSED.

@@ -1,7 +1,7 @@
 # CPLD-ROM-0005 — Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70
 
 **ID:** `CPLD-ROM-0005`  
-**Status:** `REVIEW`\
+**Status:** `RESOLVED`  
 **Title:** Retarget ROM image/export and hardware contract to 128 KiB SST39VF010-70
 
 **Description**
@@ -122,7 +122,7 @@ recorded below.
 8. **Physical interface review:** Make a pin-by-pin schematic-level connection and timing table, including A16=0, IOSEL A11–A8=0, A0–A7, data bus, CE/OE/WE, 3.3 V/5 V boundaries, reset/power-up and optional slot6 arbitration. These are **design evidence**, not proof that a board works.
 9. **Program/read back:** After exact package, adapter and programmer are chosen, program **the very `-w` output** into the SST39VF010-70; read back the complete **131072 bytes** and compare SHA-256 and byte-for-byte. Until then record **PENDING PHYSICAL HARDWARE VERIFICATION**. Do not close or approve the physical portion based solely on emulator tests.
 
-## 6. Acceptance criteria
+## 6. Software acceptance criteria — reviewed and accepted 2026-11-21
 
 - [x] The emulator's compiled ROM backing is **0x20000 bytes** and the unchanged slot and Apple arrays fit in the lower 64 KiB. The reserved upper 64 KiB is zero-filled.
 - [x] The optional `-w IMAGEFILE` emits exactly **131072 bytes** from the backing used by the CPU. Startup with no arguments creates no file.
@@ -131,11 +131,13 @@ recorded below.
 - [x] Apple boot, `PR#3`/`PR#0`, all six compiled slot patterns and the Disk II bootstrap pass. The owner's earlier verification remains recorded.
 - [x] Rev 5 of the ROM map and the flash contract specify the **128 KiB SST39VF010-70**, physical A0–A16 and the zero-filled reserved upper 64 KiB.
 - [x] The reference pin map, A16 strap, mux, bus arbitration, voltage domains and timing are recorded in CPLD-HW-0001.
-- [ ] Exact purchase suffix/package is confirmed; target's **DIP32 socket versus VF010 PLCC/TSOP** compatibility is explicitly addressed through a pin-mapped adapter or owner-approved mechanical revision.
-- [ ] The physical board demonstrates safe voltage translation, exclusive data ownership, A16 and IOSEL wiring, CPU read margins and WE# high. Record measurements in CPLD-HW-0001.
-- [ ] When hardware is available: program the exact export and compare **full 128 KiB flash readback** against the source image. Record chip identifier, programmer, source SHA, image SHA and results; until then **PENDING HARDWARE VERIFICATION**.
+### Hardware acceptance transferred to CPLD-HW-0001 (still OPEN)
 
-**Closure policy:** The ROM image/emulator **software portion** may be reviewed and resolved after tests. The *physical chip/adapter/voltage/PCB/readback* work is also tracked by `CPLD-HW-0001`/`CPLD-ROM-0004`, and shall not be claimed complete before hardware evidence. A new decision to use the spare 64 KiB needs its **own** design/ticket; this ticket must not implement it.
+- [ ] Confirm exact purchased SST39VF010-70 suffix/package; ensure the target DIP32 footprint is matched with an approved, pin-mapped adapter or an approved board revision.
+- [ ] Verify actual 3.3 V/5 V interface, chip-enable arbitration, timing margins, A16 grounded for ROM reads, IOSEL address mux, reset/CE#/OE#/WE# behaviour and optional slot6 contention on hardware.
+- [ ] Program the **exact 131072-byte `-w` output** into the real device and compare the complete-chip readback byte-for-byte, including SHA-256, programmer settings and part identity.
+
+**Scope and closure:** ROM-0005 resolves the **emulator/RTL simulation and reference-hardware-documentation deliverables**. These unverified physical activities are assigned to [CPLD-HW-0001](CPLD-HW-0001.md), not considered satisfied here. Populated slot7 ProDOS/IOMEM continues in [CPLD-TEST-0001](CPLD-TEST-0001.md). Usage of the spare 64 KiB needs a future owner-approved task.
 
 **Notes**
 
@@ -159,6 +161,9 @@ recorded below.
 - **2026-11-21 — Desktop boot and disk:** With `-w`, the default build reached Applesoft. The keyboard probe entered internal ROM at `$C300` for `PR#3`, returned with `PR#0` and captured the result `5` and new prompt after `PRINT 2+3`. The compiled Disk II fixture executed at `$C600`, loaded all 256 bytes of sector zero from a scratch copy of `images/discs/solo-flight.dsk` into `$0800–$08FF` and fetched its first instruction at `$0801`. The disk copy matched the source after the run.
 - **2026-11-21 — Status change:** `IN_PROGRESS → REVIEW` after software verification. The proposed reference connections use a fixed A16-low strap. The actual part suffix, adapter or footprint, voltage and timing measurements, and complete chip readback are pending physical verification.
 
+- **2026-11-21 — Independent code review:** Approved `ROM_BACKING_SIZE=0x20000u`, the unchanged Apple/slot ROM init sequence, zero-filled high bank, exporter and OOB handling. The existing MMU already keeps ROM A16 clear; neither `MMU_addr.v` nor RAM bank logic required modification. Tests now assert the ROM-versus-RAM A16 distinction and the exact 128 KiB export. The developer reports 529 standalone MMU checks per variant, 33 backing checks, 29,991 combined IOU/MMU checks per variant, repeatable byte/sha256 file parity, slot-pattern sweep, Apple IIe `PR#3`/`PR#0` and Disk II bootstrap. These executions were not independently rerun by reviewer; source and tests were examined. No blocking software defect found.
+- **2026-11-21 — Scope and status:** `REVIEW → RESOLVED` for software and documented hardware reference interface. The actual PLCC/TSOP package/adapter choice, electrical timing/voltage, board bus arbitration and chip programming/readback **remain OPEN under CPLD-HW-0001**, as requested by the original closure policy; no hardware validation is inferred. Owner PR/merge required before CLOSED.
+
 **Proposed Change**
 
 Implement the narrowly scoped **128 KiB** ROM backing and single-image exporter on `mmu-rom-analysis`; strengthen ROM-A16=0 and ROM-bus regression evidence without rewriting already-approved MMU logic; update the mapping/flash documentation; and produce a hardware-facing pinout, level-shift, address and timing checklist for the chosen SST39VF010-70. The emulator remains the ROM source and optional exporter; hardware program/readback remains a separate acceptance gate.
@@ -167,15 +172,11 @@ Implement the narrowly scoped **128 KiB** ROM backing and single-image exporter 
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `216b012` | `UNREVIEWED` | Start the flash retarget and record the approved baseline |
-| `mmu-rom-analysis` | `cf47ae7` | `UNREVIEWED` | Retarget the backing and export, verify MMU and desktop ROM reads, and revise the flash contract |
+| `mmu-rom-analysis` | `216b012` | `APPROVED` | Start the flash retarget and record the approved baseline |
+| `mmu-rom-analysis` | `cf47ae7` | `APPROVED` | Retarget the backing and export, verify MMU and desktop ROM reads, and revise the flash contract |
 
 **Resolution Description**
 
-The emulator retarget and verification are ready for owner review. The
-131072-byte export preserves the approved lower 64 KiB and zero-fills the
-reserved upper 64 KiB. [ROM memory map rev 5](../../rom-memory-map.md)
+**RESOLVED (software and hardware-reference specification), 2026-11-21.** The emitter now writes a **131072-byte, headerless** SST39VF010-70 image from the same compiled arrays used by the emulator; old and new exports have byte-identical first 65536 bytes with identical inputs, the 65536-byte unused upper bank is zero-filled, and full-size/bounds/ROM-A16/RAM-A16 tests pass as reported. `docs/rom-memory-map.md` rev 5 and `docs/rom-flash-image-contract.md` document the supported hardware image and reference electrical considerations. The original RTL decoding is retained. Reviewer accepts the source-level implementation and the developer's recorded tests.
 
-**Pending physical hardware verification.** Schematic and electrical
-validation and the byte-for-byte 131072-byte chip readback are tracked in
-[CPLD-HW-0001](CPLD-HW-0001.md) and [CPLD-ROM-0004](CPLD-ROM-0004.md).
+**PENDING PHYSICAL HARDWARE VERIFICATION:** package/adapter, 3.3 V interface, timing, chip-select and actual programmed/readback image are **not done** and must be accepted under [CPLD-HW-0001](CPLD-HW-0001.md). Later slot7 ProDOS/IOMEM tests remain with [CPLD-TEST-0001](CPLD-TEST-0001.md). These exclusions do not imply the chip is ready for PCB release. Await owner integration/merge before CLOSED.
