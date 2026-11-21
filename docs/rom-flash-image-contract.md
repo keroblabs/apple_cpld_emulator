@@ -1,5 +1,7 @@
 # DIP32 Flash Image Contract
 
+> **Owner-approved pending device change (2026-11-21):** [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md) changes the physical target from 256 KiB to **128 KiB SST39VF010-70** (131072 bytes). The older 262144-byte image statements below are historical until the developer updates this contract. The selected VF010 is a **low-voltage PLCC32/TSOP32** part in the manufacturer datasheet, not a verified drop-in DIP32. No physical wiring or programming approval is implied.
+
 **Status:** Owner release requirement, aligned with ROM map rev 4 on 2026-11-21.
 
 **Tickets:** [Image export and parity](tasks/db/CPLD-ROM-0004.md), [emulator backing](tasks/db/CPLD-ROM-0003.md), [hardware ROM](tasks/db/CPLD-HW-0001.md)

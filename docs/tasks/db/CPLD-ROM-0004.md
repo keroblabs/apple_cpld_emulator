@@ -6,6 +6,8 @@
 
 **Description**
 
+**2026-11-21 OWNER CHANGE NOTICE:** Original 256 KiB export/file-size requirements are **superseded** by [CPLD-ROM-0005](CPLD-ROM-0005.md): selected SST39VF010-70 **128 KiB** target, first 64 KiB preserved, high 64 KiB reserved. Implementation and tests are pending. This notice does **not** assert that the 128 KiB version has been built or tested.
+
 The DIP32 hardware ROM takes one contiguous, headerless 256 KiB image. The
 emulator builds it in memory from the compiled ROM arrays, optionally exports
 those bytes during startup and runs from the same backing.
@@ -68,6 +70,8 @@ The previous mandatory emulator runtime-input-image design is **superseded** by 
 
 - **2026-11-21 — Independent Acceptance Review:** Approved software export and no-input-CLI implementation. Do not mark complete until actual DIP32 part/capacity/addressing, programmer readback and populated ProDOS/IOMEM tests; these are explicitly retained, not defects in current emulator code.
 - **2026-11-21 — Review Status:** Remains `REVIEW` because hardware/programming and populated slot7 acceptance items are not yet complete.
+
+- **2026-11-21 — Owner scope change:** SST39VF010-70 (128 KiB) replaces the 256 KiB flash-size assumption. CPLD-ROM-0005 owns emulator resize/export/tests and required physical-voltage/package review. Preserve prior 256 KiB development evidence in historical notes; new ROM-0004 acceptance image size must follow ROM-0005 once implemented. Keep physical programming/readback pending.
 
 **Proposed Change**
 

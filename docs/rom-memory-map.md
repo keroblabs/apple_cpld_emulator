@@ -1,5 +1,7 @@
 # ROM and Expansion-ROM Memory Map (CPLD-ROM-0002)
 
+> **Owner-approved pending image-size change (2026-11-21):** The 256 KiB / 0x40000 backing described below is the **tested historical rev-4 baseline**. [CPLD-ROM-0005](tasks/db/CPLD-ROM-0005.md) specifies the new **128 KiB SST39VF010-70** target: first 0x10000 bytes *unchanged*, upper 0x10000–0x1FFFF zero/reserved. Developer must revise this document to rev 5 after implementing/verifying the new export. Do not use old 256 KiB size for the target programmer.
+
 **Status:** Specification for review, rev 4 (2026-11-21, `mmu-rom-analysis`)
 
 The emulator assembles its ROM from compiled arrays. It can write those same

@@ -6,6 +6,8 @@
 
 **Description**
 
+**2026-11-21 OWNER DEVICE CHANGE:** [CPLD-ROM-0005](CPLD-ROM-0005.md) selects SST39VF010-70, **128 KiB, 17 address bits, nominal 3.3 V**, not a 256 KiB/18-bit part. Verify complete package suffix: vendor documents PLCC32/TSOP32, *not* through-hole DIP32. Physical socket adapter and 5 V/3.3 V interfacing are mandatory topics before PCB approval. Upper 64 KiB is currently reserved; no ROM A16=1 accesses.
+
 Formalise SPI master, RTC and serial flash ownership for the STM32. Define
 how the CPLD selects and addresses the separate DIP32 ROM for synchronous
 CPU reads.
@@ -34,6 +36,8 @@ CPU reads.
 - **2026-11-21 — Target image size:** The expected hardware contents are the exact 256 KiB startup backing exported by the emulator with `-w`. Verify the part, address wiring and programmer readback against that file.
 
 - **2026-11-21 — ROM review handoff:** The emulator's six per-slot patterns and default image have been verified by the owner, and ROM-0001/0002/0003 are accepted as software. Physical DIP32 acceptance remains OPEN: a 256 KiB flash requires 18 address bits. Current MMU signal exposes only 5 upper bits by default or 17 bits total in the FULL configuration, while actual ROM-read addresses presently occupy 0x00000–0x0FFFF and 0x10000–0x3FFFF are zero-filled. Document the intended physical A16/A17 high-line state, source for A0–A11 (including IOSEL clearing A10–A8), select of internal/slot ROM for OE/CE, contention with C6XX_N, and read timing. Test with a populated target before hardware acceptance.
+
+- **2026-11-21 — Device selection supersession:** The prior 256 KiB, 18-bit note is historical. Owner now requires SST39VF010-70 **128 KiB**, A0–A16, with A16 low on current ROM cycles and no banking. Validate 70 ns timing, CE#/OE#/WE#, PLCC/TSOP-to-DIP32 issue, and 3.3 V versus 5 V electrical compatibility. Link review and eventually physical readback to CPLD-ROM-0005; do not claim physical approval yet.
 
 **Proposed Change**
 
