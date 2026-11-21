@@ -73,6 +73,7 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 - **2026-11-21 — ASSIGNEE (GPT-6) — Baseline reproduction:** After configuring the combined emulator regression for `-DSPK_IN_MMU` without `-DIOU_COMPLETE`, `./emulator/onboard/verification/run_tests.sh` failed before RTL changes because the old testbench still connected conditional IOU output pins and MMU lacked the annunciator ports. Verilator reported missing `CAS_OUT`/`SPK_OUT` on `MMU_io` and `PINNOTFOUND` for the IOU output connections plus `SW2`, `PDL2` and `PDL3`. This confirms that the requested reduced-IOU/MMU-output build was invalid at baseline.
 - **2026-11-21 — ASSIGNEE (GPT-6) — Implementation:** Added MMU `AN0..AN3` ports without a preprocessor guard, connected the C05x latch outputs, and wired the combined testbench's speaker, cassette and annunciator outputs to `MMU_io`. The testbench continues to feed `IOU_common.AN3` into `IOU_iomem` for the existing status path. Updated the three ignored local build helpers as requested, changed the tracked emulator regression to use `-DSPK_IN_MMU` without `-DIOU_COMPLETE`, and added output ownership and status regressions.
 - **2026-11-21 — ASSIGNEE (GPT-6) — Verification:** With Verilator 5.045 devel, `./emulator/onboard/verification/run_tests.sh` passed default and `FULL_MMU_ADDR` variants with 30,027 checks each, including `$C020/$C030`, emulator speaker/cassette capture and all `$C058–$C05F` annunciator set/clear outputs; ROM backing passed 33 checks. `./rtl_MMU/verification/run_tests.sh` passed 787 checks per address variant; `bash rtl_IOU/verification/run_spi_tests.sh` passed 59 checks; `./rtl_IOU/verification/run_spi_phase_tests.sh` passed 24,002 checks including an internal AN3 status readback check. Standalone MMU, reduced IOU and combined testbench Verilator builds also passed with the requested define sets. No post-change Yosys/Atmel fits, physical timing review or board tests were run; those acceptance gates remain pending.
+- **2026-11-21 — ASSIGNEE (GPT-6) — Commit recorded:** Local implementation commit `44d9253` on `rtl-compile-work`; the commit is unreviewed and has not been pushed or merged.
 
 **Proposed Change**
 
@@ -112,6 +113,7 @@ The reviewed `CPLD-HW-0002` and `CPLD-HW-0003` Verilog/emulator work is function
 | --- | --- | --- | --- |
 | `rtl-compile-work` | *documentation handoff* | UNREVIEWED | Owner-reported independent MMU/IOU FIT summaries; exact documentation commit recorded in branch history |
 | `rtl-compile-work` | `2038fee` | UNREVIEWED | Record owner-approved MMU signal ownership, emulator sync, fitting acceptance tests and stakeholder provenance |
+| `rtl-compile-work` | `44d9253` | UNREVIEWED | Move peripheral outputs to MMU; add output ownership, emulator capture and internal AN3 status regressions |
 
 **Resolution Description**
 
