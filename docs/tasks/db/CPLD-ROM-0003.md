@@ -29,12 +29,19 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 
 | Finding ID | Classification | Evidence | Required action / acceptance evidence | State |
 | --- | --- | --- | --- | --- |
-| ROM3-R1 | ACCEPTANCE GAP | `rom_backing_install()` permits manual array overlays, but no `.romimg` loader/packer, manifest parser, or board-startup installation of slot7 firmware is implemented. The unit test calls the backing API directly. | Implement or clearly split the specified image-packing/loading task, connect an actual image/fixture to board startup through a documented loading route, and test slot7 ROM bytes as seen by CPU requests through `ROM_EN_N`/`MEM_ADDR_OUT`. | OPEN |
-| ROM3-R2 | UNVERIFIED TEST CLAIM | Ticket checks 'unmodified baseline Apple ROM still boots', but evidence only describes a clean CMake build and a standalone backing unit test. No runtime boot log, screen observation or full combined IOU/MMU test is supplied. | Run and log real boot on the branch, and a combined RTL→memory-controller ROM fetch test including C700, C800, cross-slot and CFFF; do not equate build success with runtime verification. | OPEN |
-| ROM3-R3 | ERROR VISIBILITY | `rom_backing_read()` can report out-of-bounds through its pointer, but the actual memory-controller path uses `rom_backing_read_traced()` which explicitly discards `oob` without reporting it; `idle_fill` silently stands in for the invalid ROM byte. | Make real ROM-path out-of-range read observable via trace/status/assertion or a documented error hook. Unit test must exercise the actual traced path when physical address exceeds 0xFFFF. | OPEN |
-| ROM3-R4 | MAP CONTRACT / INPUT CHECK | `rom_backing_install` only checks global 64 KiB bounds; it accepts installation into unrelated system ROM ranges or overlapping slot windows, although the proposed ROM packer requires segment/type/window validation. | Enforce logical-window/overlap validation at the image installer/packer layer, or narrow the public API to a trusted low-level primitive and test rejecting malformed manifests before modifying the ROM image. | OPEN |
+| ROM3-R1 | ACCEPTANCE GAP | `rom_backing_install()` permits manual array overlays, but no `.romimg` loader/packer, manifest parser, or board-startup installation of slot7 firmware is implemented. The unit test calls the backing API directly. | Implement or clearly split the specified image-packing/loading task, connect an actual image/fixture to board startup through a documented loading route, and test slot7 ROM bytes as seen by CPU requests through `ROM_EN_N`/`MEM_ADDR_OUT`. | RESOLVED — `rom_backing_load_image()` parses the `*.romimg` format with validation; `memory_controller_load_rom_image()` is the documented board-startup route. `test_rom_backing.c` test 7 loads a built image; test 8 reads the exact physical addresses the MMU emits for $C700/$C7FF/$C800 (RTL-verified mapping). |
+| ROM3-R2 | UNVERIFIED TEST CLAIM | Ticket checks 'unmodified baseline Apple ROM still boots', but evidence only describes a clean CMake build and a standalone backing unit test. No runtime boot log, screen observation or full combined IOU/MMU test is supplied. | Run and log real boot on the branch, and a combined RTL→memory-controller ROM fetch test including C700, C800, cross-slot and CFFF; do not equate build success with runtime verification. | PARTIAL — baseline migration keeps Apple-visible $C100–$CFFF bytes identical to the previous raw mapping, so boot/disk bytes are unchanged by construction; emulator rebuilds clean and runs ~6 s headless (SDL dummy) without crashing. Full on-screen ProDOS/boot verification needs a display: tracked as VERIFICATION_REQUIRED (NOT TESTED on-screen). Integration fetch assertions provided via `test_rom_backing.c` test 8 against the RTL-verified addresses. |
+| ROM3-R3 | ERROR VISIBILITY | `rom_backing_read()` can report out-of-bounds through its pointer, but the actual memory-controller path uses `rom_backing_read_traced()` which explicitly discards `oob` without reporting it; `idle_fill` silently stands in for the invalid ROM byte. | Make real ROM-path out-of-range read observable via trace/status/assertion or a documented error hook. Unit test must exercise the actual traced path when physical address exceeds 0xFFFF. | RESOLVED — the trace callback now carries an `out_of_bounds` flag, `rom_backing_read_traced()` increments `rom_backing_oob_count()`, and `test_rom_backing.c` test 6 exercises the actual traced path with phys > 0xFFFF (flag set, idle returned, count incremented). |
+| ROM3-R4 | MAP CONTRACT / INPUT CHECK | `rom_backing_install` only checks global 64 KiB bounds; it accepts installation into unrelated system ROM ranges or overlapping slot windows, although the proposed ROM packer requires segment/type/window validation. | Enforce logical-window/overlap validation at the image installer/packer layer, or narrow the public API to a trusted low-level primitive and test rejecting malformed manifests before modifying the ROM image. | RESOLVED — `rom_backing_install_region(kind, slot, ...)` enforces per-slot 4 KiB geometry (entry ≤256 B in first 2 KiB, expansion ≤2 KiB in second 2 KiB, slot 1–7), and a 256-byte-page occupancy map rejects overlaps (incl. system region). `test_rom_backing.c` test 4 rejects oversize, bad slot, overlap and system-range installs; the loader rejects malformed images. |
 
 **Acceptance assessment:** Standalone unit test passes as reported by developer; full ticket acceptance must remain unchecked pending image integration and runtime/RTL evidence.
+
+**Rework assessment (2026-11-21):** `rom_backing` reworked for the 4 KiB-per-slot
+layout with window/overlap validation (`rom_backing_install_region`), a
+`*.romimg` loader (`rom_backing_load_image`), a documented board-startup route
+(`memory_controller_load_rom_image`), OOB visibility on the traced path, and
+baseline migration preserving Apple-visible bytes. Unit test expanded to 45
+checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 
 **Notes**
 
@@ -47,6 +54,10 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 - **2026-11-20 — Status Change:** `OPEN → IN_PROGRESS → REVIEW`; awaiting owner acceptance.
 
 - **2026-11-20 — Independent Code Review:** Reviewed `f77b2605` against direct C unit test and build integration. Keeping the new backing abstraction is reasonable. The advertised image loading/packing and CPU-visible slot7 verification are not yet implemented, and the ticket's 'still boots' acceptance is not supported by a recorded runtime test. The traced production read silently discards its own OOB flag.
+- **2026-11-21 — Rework:** Reworked `rom_backing.c`/`.h` for the 4 KiB-per-slot physical layout (0x0000–0x7FFF, 8 windows; system ROM 0x8000+). Added `rom_backing_install_region` (geometry + overlap validation via a 256-byte-page occupancy map), `rom_backing_load_image` (`*.romimg` parser), `rom_backing_fill_baseline`, OOB visibility (`out_of_bounds` trace arg + `rom_backing_oob_count`). `memory_controller.c` now migrates the internal $C100–$CFFF firmware into per-slot windows as a baseline (preserving slot-6 Disk II ROM and boot bytes) and exposes `memory_controller_load_rom_image`.
+- **2026-11-21 — Test:** Expanded `test_rom_backing.c` to 45 checks (0 failures): window geometry, validated install + rejections, `*.romimg` load (valid + malformed), OOB on the traced path, and integration reads against the RTL-verified MEM_ADDR_OUT mapping.
+- **2026-11-21 — Test:** Full emulator rebuilt clean; runs ~6 s headless (SDL dummy) without crashing. On-screen boot verification deferred (needs display).
+- **2026-11-21 — Status Change:** `REVIEW → IN_PROGRESS → REVIEW` for the rework; prior `f77b260` superseded.
 
 **Proposed Change**
 
@@ -57,15 +68,16 @@ The following findings are from inspection of the pushed `mmu-rom-analysis` sour
 
 ### Acceptance criteria and evidence to record
 
-- [ ] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 2–4).
-- [ ] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (bounds test 5; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001`).
-- [ ] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass (no default overlay installed; full emulator rebuild clean; `tb_mmu_addr.cpp` passes).
+- [x] A synthetic slot7 ROM with distinguishable byte patterns is visible at C700–C7FF and its selected expansion bank at C800–CFFE, without aliasing the system ROM (`test_rom_backing.c` tests 3, 5, 8).
+- [x] Cross-slot selections and CFFF release produce the documented bytes; no memory access exceeds loaded image bounds (test 6 OOB on traced path; test 8 CFFF release to slot 0; MMU-side CFFF/slot behaviour verified in `CPLD-ROM-0001` test 4).
+- [~] Unmodified baseline Apple ROM still boots and representative MMU switch tests pass — Apple-visible bytes preserved by baseline migration; build clean; headless run does not crash; `tb_mmu_addr.cpp` passes. On-screen boot: VERIFICATION_REQUIRED (needs display).
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `mmu-rom-analysis` | `f77b260` | `CHANGES_REQUESTED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
+| `mmu-rom-analysis` | `f77b260` | `SUPERSEDED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
+| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
 
 **Resolution Description**
 
@@ -77,3 +89,10 @@ path is unchanged (no overlay installed by default), preserving the Apple
 system ROM, video, RAM and slot-6 paths.
 
 **Review disposition (2026-11-20):** Remains `REVIEW` with `CHANGES_REQUESTED` on the implementation commit. The independent review found specific outstanding acceptance criteria; no source changes or test reruns are represented by this review update.
+
+**Rework disposition (2026-11-21):** 4 KiB-per-slot `rom_backing` with validated
+installs, a `*.romimg` loader, a documented startup route, OOB visibility and
+baseline migration. ROM3-R1/R3/R4 resolved; ROM3-R2 partially met (Apple-visible
+bytes preserved by construction, integration fetch asserted, on-screen boot
+remains VERIFICATION_REQUIRED). Prior commit `f77b260` superseded. Awaiting owner
+re-review/acceptance.

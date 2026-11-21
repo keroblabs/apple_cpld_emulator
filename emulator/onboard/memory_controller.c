@@ -101,11 +101,42 @@ void memory_controller_init( void )
     memset( &ram_memory[0], 0xA0, RAM_MEMORY_SIZE );
 
     // Initialise the logical ROM space and load the Apple firmware image at its
-    // CPU base ($8000). Slot overlays (e.g. slot 7 ProDOS) may be installed on
-    // top via rom_backing_install once a packaged image exists (ROM-0002/0003).
+    // CPU base ($8000). Per-slot IO firmware (e.g. slot 7 ProDOS) is installed
+    // from a packaged *.romimg via memory_controller_load_rom_image() once an
+    // image exists (ROM-0002 format / ROM-0003 loader).
     rom_backing_init( apple_rom_bin, sizeof( apple_rom_bin ), 32 * 1024, 0xA0 );
 
+    // Preserve existing Apple-visible behaviour under the 4 KiB-per-slot layout:
+    // migrate the internal $C100-$CFFF firmware (as previously served from the
+    // raw ROM image) into each per-slot window as a BASELINE. This keeps the
+    // slot-6 Disk II boot ROM and other internal firmware byte-identical at the
+    // Apple address level, while the MMU now maps ROM reads to per-slot windows.
+    // A packaged image loaded later may override any of these baselines.
+    {
+        // apple_rom_bin covers $8000-$FFFF; $C000 is at image offset 0x4000.
+        const uint8_t *cpage = &apple_rom_bin[ 0xC000 - 0x8000 ];
+        int slot;
+        for( slot = 1; slot <= 7; slot++ )
+        {
+            // IOSEL entry page $Cn00-$CnFF (256 bytes).
+            rom_backing_fill_baseline( rom_backing_slot_entry_phys( slot ),
+                                       &cpage[ slot * 0x100 ], 0x100 );
+            // Shared IOSTB expansion $C800-$CFFF (2 KiB) replicated per slot,
+            // matching the previous raw-address behaviour for any selected slot.
+            rom_backing_fill_baseline( rom_backing_slot_expansion_phys( slot ),
+                                       &cpage[ 0x800 ], 0x800 );
+        }
+    }
+
     disc_drive_init();
+}
+
+int memory_controller_load_rom_image( const void * image, uint32_t image_len )
+{
+    // Documented startup route for installing per-slot IO firmware ROM from a
+    // packed image. Validation (window geometry, overlap, bounds) is enforced
+    // by the rom_backing loader.
+    return rom_backing_load_image( ( const uint8_t * )image, image_len );
 }
 
 uint8_t memory_controller_access( void * p_cpld, uint32_t cpu_address, bool_t is_read, uint8_t data_in )

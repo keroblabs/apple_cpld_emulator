@@ -15,6 +15,10 @@ extern "C" {
 
 void memory_controller_init( void );
 
+// Install per-slot IO firmware ROM from a packed *.romimg image at startup.
+// Returns 0 on success, negative on a malformed/overlapping/out-of-bounds image.
+int memory_controller_load_rom_image( const void * image, uint32_t image_len );
+
 uint8_t memory_controller_access( void * p_cpld, uint32_t cpu_address, bool_t is_read, uint8_t data_in );
 
 void memory_controller_tick( void * p_cpld, uint64_t cycles );
