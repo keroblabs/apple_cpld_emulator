@@ -1,46 +1,83 @@
-# CPLD-HW-0002 — Add independent SRAM and parallel-flash RD/WR strobes to RTL and emulator
+# CPLD-HW-0002 — Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **ID:** `CPLD-HW-0002`  
 **Status:** `OPEN`  
-**Title:** Add independent SRAM and parallel-flash RD/WR strobes to RTL and emulator
+**Title:** Add shared BUS_RD_N/BUS_WR_N controls to RTL and emulator
 
 **Description**
 
-The MMU currently exposes `RAM_EN_N` and `ROM_EN_N`, but not **separate physical read and write control pins for each memory device**. Design, implement, simulate and expose **four independent active-low outputs**: `SRAM_RD_N`, `SRAM_WR_N`, `FLASH_RD_N`, `FLASH_WR_N` (final pin names may follow an agreed schematic convention). The emulator must sample **these actual Verilog outputs** and use them to determine external SRAM/ROM accesses, rather than manufacturing the strobes from software's CPU read/write flag.
+The MMU already has **separate SRAM and flash select/decode signals**. Do not waste four pins on per-device read/write strobes: implement and expose **exactly two new shared active-low bus controls**, `BUS_RD_N` and `BUS_WR_N`. Each memory device interprets these in combination with its **existing selection signal**, so that the two shared strobes save two CPLD pins. Propagate the new RTL outputs through the Verilator adapter and make the emulator use the *actual* strobe/select combination when accessing RAM and parallel flash. Preserve the ability to use the NOR flash's write/update capability; do **not** permanently disable flash writes.
+
+This is an **RTL and emulator software implementation ticket**. Hardware layout/schematic/PCB design, voltage translation and physical chip bring-up are out of scope. Nevertheless, the RTL **must synthesise and fit the intended ATF1508ASV**, including package I/O allocation, macrocells and timing.
 
 **Details**
 
 - Kind: TASK
 - Category: `CPLD-HW`
 - Milestone: M1 — ROM mapping / MMU hardware interface
-- Baseline: `main`, inspected 2026-11-21; **implementation branch to be agreed by owner** (ticket prepared on `cpld-hw-0001-0003-tickets`)
-- Dependencies: [CPLD-HW-0001](CPLD-HW-0001.md) (part/ownership decisions), [CPLD-ROM-0005](CPLD-ROM-0005.md) (address/ROM image contract)
-- Scope: MMU RTL, combined Verilator top, C++ RTL adapter, emulator memory-controller logic and tests. **Not** an STM32/SPI-master implementation or a rewrite of the MMU map.
+- Baseline: `main` inspected 2026-11-21; documentation updated on `cpld-hw-0001-0003-tickets`. Implementation branch per owner/developer workflow.
+- Dependencies: [CPLD-HW-0001](CPLD-HW-0001.md) (device, SPI ownership and 128 KiB decisions), [CPLD-ROM-0005](CPLD-ROM-0005.md) (immutable *image-layout contract*, not immutable physical NOR).
+- Scope: MMU RTL, combined Verilator top, C++ RTL interface, emulator RAM/flash selection and tests, synthesis/fitting report. No unrelated protocol, firmware or PCB redesign.
 
 **Notes**
 
-- **2026-11-21 — Source evidence:** `rtl_MMU/MMU.v`, `rtl_MMU/MMU_addr.v` and `rtl_IOU_MMU_TB/IOU_MMU_tb.v` expose `RAM_EN_N` / `ROM_EN_N` today. `rtl_MMU/MMU_addr.v` internally qualifies `rom_enabled` with `CPU_RW`, and its card ROM paths also involve `IOSEL_N`, `IOSTB_N` and `C6XX_N`. The slot-ROM case **cannot safely be represented by `ROM_EN_N` alone**.
-- **2026-11-21 — Emulator evidence:** `cpld/rtl_interconnect.cpp` captures enable outputs, but `emulator/onboard/memory_controller.c` currently dispatches reads/writes using enable signals and the caller's `is_read`. This can conceal incorrect physical strobes; the testbench must expose the new pins and the emulator must actually consume them.
-- **2026-11-21 — Safety boundary:** The chosen `SST39VF010-70-4I-NHE` is a programmable NOR flash, but **normal Apple CPU writes must not accidentally program/erase it**. No in-circuit flash-programming mode is approved by HW-0001. `FLASH_WR_N` needs its own pin/interface and a safe, explicitly defined inactive behaviour until a future programming path is authorised. The 128 KiB ROM image remains preprogrammed off-board.
-- **2026-11-21 — Physical boundary:** This ticket designs/validates the *digital strobes*. PLCC32 footprint, level shifting, full-chip programmer readback and board electrical/timing measurements are **not** deemed completed by RTL tests; record a future board-validation gate.
+- **2026-11-21 — Source observation:** `rtl_MMU/MMU.v`, `rtl_MMU/MMU_addr.v` and `rtl_IOU_MMU_TB/IOU_MMU_tb.v` currently expose `RAM_EN_N` and `ROM_EN_N`; the existing card-ROM strobes are `IOSEL_N`, `IOSTB_N` and `C6XX_N`. These are **not interchangeable**: `ROM_EN_N` alone does not select every flash-owned card ROM read, and `ROM_EN_N` is currently read-qualified. Verify the *actual* select policy, including optional external slot 6, before coding.
+- **2026-11-21 — Emulator observation:** `cpld/rtl_interconnect.cpp` captures the existing selects; `emulator/onboard/memory_controller.c` uses the caller's read/write direction and those selects to choose a backing. New hardware strobes must become observable and functionally consumed, not just asserted in unit tests.
+- **2026-11-21 — Owner correction (supersedes initial four-output proposal):** Two shared outputs **`BUS_RD_N` and `BUS_WR_N` only**; retain current independent SRAM/flash chip selects. This saves two external CPLD pins and reduces duplicated decode.
+- **2026-11-21 — Owner correction (flash updates):** Preserve/exploit the **SST39VF010-70-4I-NHE in-system flash write/update capability**; do not specify a permanent WE# tie-high or always-inactive `FLASH_WR_N`. A write strobe by itself does not program NOR: the flash must be legitimately selected and receive the valid command/address/data sequence. Establish and test the authorised route without introducing accidental writes or silently creating a new Apple-visible API.
+- **2026-11-21 — Scope boundary:** **Software only** (Verilog RTL, emulator and verification). Fitting to the real ATF1508ASV target is required evidence for software readiness; physical board design, measurements, power sequencing and programmer readback are separate work.
 
 **Proposed Change**
 
-1. **Specify the output truth table first.** Document active-low levels per cycle for normal SRAM read, SRAM write, internal Apple ROM read, IOSEL/IOSTB card ROM read (including optional external slot 6), RAM/ROM non-selected, CPU write to ROM range, I/O/soft-switch access, idle, reset and DMA. Account for `CPU_RW`, `PHI_0`, address validity, any existing CE grants, and turnaround/setup/hold. No RD and WR to one device may be active together, and no SRAM/flash data drivers may contend.
-2. **RTL.** Generate `SRAM_RD_N` / `SRAM_WR_N` and `FLASH_RD_N` / `FLASH_WR_N` as independent top-level MMU outputs, not merely names in the emulator. Update `rtl_MMU/MMU.v`, `rtl_MMU/MMU_addr.v` or a small dedicated decoder as appropriate, and propagate to `rtl_IOU_MMU_TB/IOU_MMU_tb.v`. Retain existing enable outputs if needed for compatibility, but define which are CE/selection and which are OE/WE strobes. Do **not** alter the approved ROM addresses or remove real-card slot 6 ownership.
-3. **Flash writes safely disabled.** Expose `FLASH_WR_N`, but **hold it deasserted in every ordinary CPU cycle**. Do not drive it from unqualified `~CPU_RW` and do not enable in-system flash programming without separate owner design approval. The physical PCB may tie WE# high or use a pull-up/controlled interface consistent with this explicit policy; reconcile schematic before fabrication. If future flash writes are needed, raise a new ticket with programming protocol, erase protection and arbitration.
-4. **Emulator/cosimulation.** Extend the Verilated top and `cpld/rtl_model.h` / `cpld/rtl_interconnect.cpp` to capture all four new outputs, including idle/reset defaults; use them in `emulator/onboard/memory_controller.c` for RAM/ROM accesses and writes. Preserve the existing SPI-master/IOU interconnect, scheduler separation and `FULL_MMU_ADDR` versus 5-bit build behaviour. A CPU write to the ROM address space must not modify the compiled `rom_backing`.
-5. **Fit and timing.** Inspect hardware pin allocation and ATF1508ASV fitter/macrocell use; report whether four extra outputs and any decode fit within the actual chosen CPLD device and available package pins. Prove PHI_0-relative OE/WE pulses, no output glitches during address changes, and no overlap across RAM↔ROM/I/O transition. If pin budget prevents all four, report the precise limitation for owner decision rather than silently multiplexing pins.
+### 1. Existing selects plus common bus strobes
 
-**Acceptance criteria / required evidence**
+Export these **two new outputs** from MMU RTL and the combined Verilator top:
 
-- [ ] Truth table and physical signal polarity documented and reviewed before implementation.
-- [ ] Dedicated four RTL outputs visible in combined Verilator model (normal and `FULL_MMU_ADDR` builds), with deterministic inactive reset/idle levels.
-- [ ] SRAM reads assert only `SRAM_RD_N`; SRAM writes only `SRAM_WR_N`; authorised flash reads assert only `FLASH_RD_N`; ordinary CPU writes never assert `FLASH_WR_N`.
-- [ ] Both internal Apple ROM and selected slot ROM reads use the correct flash grant; C6XX/slot6 external ownership, CFFF release and all I/O/non-memory cases do not generate unintended chip strobes.
-- [ ] Emulator **uses RTL-generated outputs** for SRAM/ROM read/write decisions; existing Apple IIe startup, ROM/image parity, memory switching, floppy/slot6 and keyboard regressions pass.
-- [ ] Waveform-driven tests cover read→write→read, reset mid-cycle, CPU address changes, bus turnaround, DMA semantics and both MMU address variants. No SRAM/flash contention or spurious write pulse.
-- [ ] CPLD pin/fitter report and timing limits are attached, along with actual changed files, commits and reproducible test commands. No claim of completed PCB electrical/ROM-chip validation.
+| Signal | Active level | Intended use |
+| --- | --- | --- |
+| `BUS_RD_N` | 0 | Valid granted memory-bus **read** phase |
+| `BUS_WR_N` | 0 | Valid granted memory-bus **write** phase |
+
+**Use the existing memory selects** (not extra new RD/WR pins). Logical device actions are:
+
+| Existing target selection | `BUS_RD_N` | `BUS_WR_N` | Action |
+| --- | ---: | ---: | --- |
+| SRAM selected | 0 | 1 | SRAM read |
+| SRAM selected | 1 | 0 | SRAM write |
+| Flash selected for an owned read | 0 | 1 | Parallel flash read |
+| Flash selected for an **authorised flash-update cycle** | 1 | 0 | Parallel flash program/erase **command write** |
+| Neither memory selected, or I/O/external-card owner | 1 | 1 or phase-qualified inactive | No SRAM/flash access |
+| Reset/idle/invalid cycle | 1 | 1 | No memory operation |
+
+The above is a **logical contract**, not a claim that the existing `ROM_EN_N` grants flash writes or is a complete physical chip-select. Review the actual decoded flash ownership (internal Apple Cx, card IOSEL/IOSTB, slot-6 conflict, `MODE_SEL`, `$CFFF`) separately from `CPU_RW`. Keep CE/select and RD/WR roles separate. Document explicitly the truth table for phase-qualified idle/IO cycles, DMA and mode changes. Both shared strobes must **never** assert together.
+
+### 2. RTL implementation
+
+1. Generate `BUS_RD_N` and `BUS_WR_N` in `rtl_MMU/MMU_addr.v` or a tightly scoped decode module; expose in `rtl_MMU/MMU.v` and `rtl_IOU_MMU_TB/IOU_MMU_tb.v`. Make reset/idle safe and verify PHI_0 phase and data/address setup/hold.
+2. Preserve existing `RAM_EN_N`, `ROM_EN_N`, `IOSEL_N`, `IOSTB_N`, `C6XX_N`, translated memory address, DMA behaviour and optional external slot 6. Do **not** redefine selection behaviour simply to make the new signals easy.
+3. **Flash programming is a required capability, not automatically enabled by CPU writes.** Verify whether any *current* firmware/RTL path can legitimately assert flash selection during a programming sequence; `ROM_EN_N` is presently read-qualified. Provide a source-level description and a failing regression for any missing select/grant. Ensure the shared `BUS_WR_N` reaches flash only when its existing select is valid in a controlled update context; **ordinary CPU writes to ROM ranges must not be mistaken for authorised flash commands**. If an authorisation/grant or command path must be added, submit the minimum concrete design/gap for owner review rather than assuming new control registers, changes to the IOMEM/SPI protocol or a new dedicated pin.
+4. Keep the 128 KiB image/map unchanged. Flash A16 is low for current CPU ROM mapping and the upper 64 KiB remains reserved: do **not** quietly claim in-system update access to the upper bank without a demonstrated address route and separate approval.
+
+### 3. Emulator integration and tests
+
+1. Capture **both actual Verilated outputs** in `cpld/rtl_model.h` and `cpld/rtl_interconnect.cpp`, with reset defaults; update `cpld/rtl_memory_bus.cpp` and `emulator/onboard/memory_controller.c` as appropriate. RAM reads/writes and flash reads must be determined from **existing select + `BUS_RD_N`/`BUS_WR_N`**, not solely from the call's `is_read` value. CPU direction remains an input to drive RTL, but cannot substitute for inspecting its resulting strobes.
+2. Keep the normal ROM backing/export invariant: the emulator starts from the compiled 131072-byte image; ordinary reads continue to return identical bytes. If flash update sequencing is modelled, separate **mutable runtime flash state** from the compiled initial image and explicitly define how update commands affect it; do not silently change the `-w` **startup-image export** contract.
+3. Test SRAM read/write, internal/slot flash read, external slot6/IOSEL/IOSTB ownership, `$CFFF` release, CPU write to a ROM-mapped address without authorisation, valid authorised flash command-write strobe, read→write turnaround, I/O, reset, DMA and invalid/aborted cycles in both normal and `FULL_MMU_ADDR` builds.
+4. For flash updates, separately verify **write eligibility/selection** and the flash-device command sequence; a toggling `BUS_WR_N` by itself is **not** proof of flash byte programming/sector erase. If the update path cannot yet be fully exercised, record the precise missing software functionality and make it a separate reviewed dependency; do not mark the update capability as verified.
+
+### 4. CPLD implementation feasibility (without designing the board)
+
+Run the available Yosys/`atf15xx_yosys` and fitter flow for the **actual intended ATF1508ASV variant**. Compare two additional I/O pins against the previous four-output proposal, report final macrocell/logic use, pin assignments, timing (particularly shared read/write strobe glitches and mutually exclusive phases), and any conflict with fixed I/O/clock limitations. RTL fit is a gate; **PCB schematic, level shifters and physical signals remain outside this ticket**. On fit failure, provide report and targeted RTL recommendation for owner review.
+
+**Acceptance criteria / evidence**
+
+- [ ] Exactly **two** new RTL pins (`BUS_RD_N`, `BUS_WR_N`) appear in both Verilator variants; no `SRAM_*_N` or `FLASH_*_N` per-device strobe pins are added.
+- [ ] Existing SRAM/flash selects retained; truth table and qualifiers cover both directions, flash-owned card ROM cases and optional external slot6 correctly.
+- [ ] `BUS_RD_N` and `BUS_WR_N` are never active simultaneously; reset, idle and bus transitions are deterministic and free of unintended pulses.
+- [ ] Emulator consumes the RTL outputs with the existing selects and passes full Apple IIe, RAM switching, slot-ROM, IOMEM/keyboard and Disk II regressions.
+- [ ] Flash write/update capability is **not designed out**; a valid flash-selection/program-command path is documented and tested where implemented, or the missing path is explicitly captured as a blocker/follow-on (never misreported as implemented).
+- [ ] Default ROM backing and the 131072-byte `-w` export remain byte-identical before any explicit runtime update; upper bank policy unchanged.
+- [ ] ATF1508ASV synthesis/fitter, external pin usage and timing evidence attached. Physical PCB fabrication and electrical tests are not acceptance criteria.
 
 **Commits**
 
@@ -49,4 +86,4 @@ The MMU currently exposes `RAM_EN_N` and `ROM_EN_N`, but not **separate physical
 
 **Resolution Description**
 
-Pending implementation/review. Ticket creation does not authorise unrelated RTL changes or physical-hardware approval.
+Pending RTL/emulator implementation, simulation tests and CPLD fitter evidence. No physical hardware design or in-system flash-programming protocol change has been approved by creating this ticket.
