@@ -51,7 +51,7 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 - [x] Test vectors include first transfer, CS-high preload, all payload bit positions, trailing clock, repeated/status-only transfers, keyboard traffic, aborts/extra clocks, and interleaved PHI_0 accesses.
 - [x] Selector-alias and extra-clock command-replay defects fail against the baseline and pass after correction; no final-bit loss or unintended selector side effects in the focused regression.
 - [x] A bit-banged-master waveform contract is documented, **without requiring STM32 peripheral-mode compatibility**.
-- [x] Original and revised RTL pass Verilator integration tests and existing Apple/keyboard/IOMEM regressions; unrelated emulator protocols unchanged.
+- [x] Revised RTL passes focused and combined Verilator integration tests, with developer-reported Apple mailbox/keyboard regressions and owner manual PR#3/PR#0; original RTL fails the targeted bug reproductions as expected; unrelated emulator protocols unchanged.
 - [ ] ATF1508ASV synthesis/fitter/timing and resource comparison included. No PCB or STM32 firmware work performed.
 - [x] The no-code-change alternative is **not applicable**: original RTL defects were reproduced and justified the focused corrections.
 
