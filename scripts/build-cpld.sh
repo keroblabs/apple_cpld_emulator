@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# CPLD-BLD-0001: run an isolated MMU/IOU synthesis and fit on devel-rtl.
+set -Eeuo pipefail
+
+usage() {
+    cat >&2 <<'HELP'
+Usage: scripts/build-cpld.sh {mmu|iou|all}
+
+Build each physical CPLD independently on devel-rtl, returning results to
+build/rtl-cpld/<TOP>.<unique-id>/ (ignored by Git).
+
+Environment:
+  RTL_BUILD_HOST       SSH host alias (default: devel-rtl)
+  CPLD_MMU_DEFINES     Space-separated Verilog defines for the MMU
+  CPLD_IOU_DEFINES     Space-separated Verilog defines for the IOU
+
+Examples:
+  ./scripts/build-cpld.sh mmu
+  CPLD_MMU_DEFINES=FULL_MMU_ADDR ./scripts/build-cpld.sh mmu
+  CPLD_IOU_DEFINES=IOU_COMPLETE ./scripts/build-cpld.sh iou
+HELP
+    exit 2
+}
+
+[[ $# == 1 ]] || usage
+case "$1" in
+    mmu) targets=(MMU) ;;
+    iou) targets=(IOU) ;;
+    all) targets=(MMU IOU) ;;
+    *) usage ;;
+esac
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
+host=${RTL_BUILD_HOST:-devel-rtl}
+[[ "$host" =~ ^[a-zA-Z0-9_.-]+$ ]] || { echo 'Invalid RTL_BUILD_HOST' >&2; exit 2; }
+
+# Explicit source configurations; the physical HW-0004 variant is not assumed.
+validate_defines() {
+    local words=$1 token
+    for token in $words; do
+        [[ "$token" =~ ^[a-zA-Z_][a-zA-Z_0-9]*$ ]] || {
+            echo "Invalid Verilog define: $token" >&2
+            return 2
+        }
+    done
+}
+validate_defines "${CPLD_MMU_DEFINES:-}"
+validate_defines "${CPLD_IOU_DEFINES:-}"
+
+mkdir -p "$root/build/rtl-cpld"
+
+build_one() {
+    local top=$1 source_dir="$root/rtl_$1" defines remote_dir result_dir run_cmd rc=0
+    [[ -f "$source_dir/$top.v" ]] || { echo "Missing $source_dir/$top.v" >&2; return 2; }
+    if [[ "$top" == MMU ]]; then
+        defines=${CPLD_MMU_DEFINES:-}
+    else
+        defines=${CPLD_IOU_DEFINES:-}
+    fi
+
+    # One remote directory per attempt; never reuse an existing .edif/.jed.
+    remote_dir=$(ssh -o BatchMode=yes "$host" \
+        "mkdir -p \"\$HOME/rtl-build/src\" && mktemp -d \"\$HOME/rtl-build/src/cpld.${top}.XXXXXXXX\"") || return
+    # Only trust mktemp-shaped paths. Never construct a cleanup command from
+    # unvalidated remote output.
+    [[ "$remote_dir" =~ ^/[a-zA-Z0-9_./-]+/rtl-build/src/cpld\.${top}\.[a-zA-Z0-9]+$ ]] || {
+        echo "Unexpected remote build path: $remote_dir" >&2
+        return 2
+    }
+    ssh -o BatchMode=yes "$host" "mkdir -p '$remote_dir/input'"
+
+    # Only Verilog from the chosen physical top; excludes historical EDIF/JED,
+    # verification, and the combined Verilator testbench by construction.
+    rsync -a --include='*.v' --exclude='*' \
+        "$source_dir/" "$host:$remote_dir/input/"
+    result_dir=$(mktemp -d "$root/build/rtl-cpld/${top}.XXXXXXXX")
+
+    # shell-escaped arguments for ssh's remote shell. The build script itself
+    # is streamed via stdin, so it is always the version in this checkout.
+    printf -v run_cmd 'bash -s -- %q %q %q' "$top" "$remote_dir" "$defines"
+    if ssh -o BatchMode=yes "$host" "$run_cmd" < "$root/scripts/remote-fit-cpld.sh"; then
+        rc=0
+    else
+        rc=$?
+        echo "Remote $top build failed (exit $rc); retrieving diagnostics" >&2
+    fi
+
+    # Retrieve diagnostics on both success and failure; never mask a build error.
+    if ! rsync -a "$host:$remote_dir/artifacts/" "$result_dir/"; then
+        echo "Failed to retrieve $top results from $remote_dir" >&2
+        return 1
+    fi
+    if (( rc != 0 )); then
+        echo "Failed build logs: $result_dir" >&2
+        return "$rc"
+    fi
+    for suffix in edif fit jed; do
+        if [[ ! -s "$result_dir/$top.$suffix" ]]; then
+            echo "Incomplete $top build: missing or empty $top.$suffix in $result_dir" >&2
+            return 1
+        fi
+    done
+    echo "$top generated artifacts: $result_dir"
+    echo "Remote work directory retained for inspection: $remote_dir"
+}
+
+for target in "${targets[@]}"; do
+    build_one "$target"
+done
