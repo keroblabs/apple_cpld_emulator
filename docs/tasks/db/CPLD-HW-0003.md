@@ -1,7 +1,7 @@
 # CPLD-HW-0003 — Review, fix and optimise IOU SPI-slave RTL
 
 **ID:** `CPLD-HW-0003`  
-**Status:** `REVIEW`
+**Status:** `RESOLVED`
 **Title:** Review, fix and optimise IOU SPI-slave RTL
 
 **Description**
@@ -40,6 +40,8 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 
 - **2026-11-21 — Independent re-review of phase regression (GPT-6):** Reviewed commit `85b7630` (`IOU_spi_phase_tb.v`, `test_spi_phase.cpp`, `run_spi_phase_tests.sh`, VCD and `docs/spi-iomem-protocol.md`) at branch head `0740a47`. The test instantiates the production `IOU_spi_iface`, `IOU_iomem` and `IOU_toggle_jk` rather than mocking the handshake. It sweeps all 1,000 integer-nanosecond relative start phases over a 1 us PHI_0 period; three selector operations per phase exercise the pending set/clear FSM plus Apple acknowledgements. At SCK=125 kHz, each active-low request persists for a complete 8 us SCK period, spanning multiple PHI_0 rising edges, and the simulator reports 24,000 checks / zero failures. Edge-coincident digital simulation is included, but it **does not** prove physical metastability/setup/hold margin or behaviour at higher SCK. **APPROVED**: test construction, documented assumptions and coverage are appropriate for the requested *software phase/hold regression*, and no RTL rework is requested. This reviewer inspected source and reported evidence, not a fresh local run (Verilator is unavailable in the review environment). No new ATF1508ASV fitting results were added to the branch, therefore the software-target fitting acceptance gate remains **OPEN** and the ticket stays **REVIEW**.
 
+- **2026-11-21 — Owner disposition of pending fitter work:** The `atf15xx_yosys` installation is ongoing. **RESOLVE software RTL fixes and waveform verification**, independently approved as commits `17ea4c6` and `85b7630`, supported by developer regression tests and owner manual PR#3/PR#0 emulator run. Carry the **unfulfilled ATF1508ASV synthesis/fitter/pin/timing criterion** under [CPLD-HW-0004](CPLD-HW-0004.md), currently DEFERRED until the RTL toolchain is ready. This approval **does not claim CPLD fit, a maximum SPI SCK, physical clock-domain margin or physical hardware verification**. The unchecked fitter checkbox below is transferred, not passed. `RESOLVED` means the software change is accepted; owner integration/merge is required for `CLOSED`.
+
 **Proposed Change**
 
 1. **Freeze the transport.** Preserve **13-bit MSB-first** transfers: five selector bits plus eight payload bits; simultaneous MISO flags/data layout, defined selectors `0` (consume Apple byte), `1` (publish byte), `2` (keyboard), `5` (status-only), and all current Apple `$C0F1/$C0F2/$C0F3` mailbox and PHI_0 pending-bit semantics. Keep the existing documented preload and trailing clock behaviour unless a waveform-proven bug and an owner-approved compatible correction require otherwise. No register/address/opcode/transport change is authorised.
@@ -68,4 +70,4 @@ This ticket is limited to **software: Verilog RTL, Verilator/co-simulation, regr
 
 **Resolution Description**
 
-Independent code review **APPROVES commit `17ea4c6`**, supported by failing-before/passing-after tests, integrated developer regressions and owner manual PR#3/PR#0. The requested digital SPI↔PHI_0 phase/hold regression is now recorded at a conservative simulated operating point. The ticket remains **REVIEW** pending ATF1508ASV resource/fitter/timing results and remaining full Apple regression evidence. Independent re-review **APPROVES `85b7630`** and accepts the 1,000-phase/24,000-check digital pending/ack timing sweep at the stated operating point. The phase sweep does not prove faster SCK rates or physical electrical timing. Hardware implementation and STM32 firmware are outside this task.
+Independent code review **APPROVES commit `17ea4c6`**, supported by failing-before/passing-after tests, integrated developer regressions and owner manual PR#3/PR#0. The requested digital SPI↔PHI_0 phase/hold regression is now recorded at a conservative simulated operating point. The reviewed software implementation and digital phase tests are **RESOLVED**; the current ATF1508ASV resource/fitter/timing gate is explicitly transferred to [HW-0004](CPLD-HW-0004.md). Developer Verilator integration and owner manual PR#3/PR#0 evidence are recorded; no physical validation is inferred. Independent re-review **APPROVES `85b7630`** and accepts the 1,000-phase/24,000-check digital pending/ack timing sweep at the stated operating point. The phase sweep does not prove faster SCK rates or physical electrical timing. Hardware implementation and STM32 firmware are outside this task.
