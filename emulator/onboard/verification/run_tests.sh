@@ -62,7 +62,7 @@ run_bus_test() {
     local objdir="$build_dir/$tag"
 
     "$verilator" --cc --exe --build -j 2 -Wall --pins-inout-enables \
-        -D_DEBUG_GPIO -DEXTERNAL_CPU -DVERILATOR_RUN -DEXTERNAL_MEMORY -DIOU_COMPLETE "$@" \
+        -D_DEBUG_GPIO -DEXTERNAL_CPU -DVERILATOR_RUN -DEXTERNAL_MEMORY -DSPK_IN_MMU "$@" \
         --top-module IOU_MMU_tb --Mdir "$objdir" \
         "-I$repo_dir/rtl_IOU" "-I$repo_dir/rtl_MMU" \
         -CFLAGS "${headers[*]} $*" \

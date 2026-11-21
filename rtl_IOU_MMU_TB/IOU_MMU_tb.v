@@ -47,18 +47,21 @@ module IOU_MMU_tb(
     input           CAS_IN,
     input           SW0,
     input           SW1,
+    // These simulator inputs stay in the C++ model API; the reduced IOU
+    // variant does not consume SW2 or PDL2/PDL3.
+    /* verilator lint_off UNUSEDSIGNAL */
     input           SW2,
 
     input           PDL0,
     input           PDL1,
     input           PDL2,
     input           PDL3
+    /* verilator lint_on UNUSEDSIGNAL */
 );
 
 assign          DATA          = CPU_RW ? dbus_out : 8'bzzzzzzzz;
 assign          dbus_in       = DATA; //  CPU_RW ? 8'd0 : DATA;
 assign          DATA_EN_N     = dbus_en;
-assign          AN3           = AN3_iou;
 
 assign          PHIO_0        = PHI_0 & DMA_N;
 assign          BUS_N         = ~DMA_N;
@@ -126,15 +129,9 @@ IOU_common u_IOU_common (
     .C0EX_N             (C0EX_N),
     .C0FX_N             (C0FX_N),
 
-    .CAS_OUT            (CAS_OUT),
-    .SPK_OUT            (SPK_OUT),
-
     .D7_c01x            (D7_c01x),
     .D7_c06x            (D7_c06x),
 
-    .AN0                (AN0),
-    .AN1                (AN1),
-    .AN2                (AN2),
     .AN3                (AN3_iou),
 
     .KBD_PENDING_IN     (kbd_pending_wire),
@@ -142,12 +139,9 @@ IOU_common u_IOU_common (
     .CAS_IN             (CAS_IN),
     .SW0                (SW0),
     .SW1                (SW1),
-    .SW2                (SW2),
 
     .PDL0               (PDL0),
-    .PDL1               (PDL1),
-    .PDL2               (PDL2),
-    .PDL3               (PDL3)
+    .PDL1               (PDL1)
 );
 
 IOU_iomem iomem_instance (
@@ -262,7 +256,14 @@ MMU_io u_MMU_io (
     .SW_80STORE      (SW_80STORE),
 
     .SW_PAGE2        (SW_PAGE2),
-    .SW_HIRES        (SW_HIRES)
+    .SW_HIRES        (SW_HIRES),
+
+    .CAS_OUT         (CAS_OUT),
+    .SPK_OUT         (SPK_OUT),
+    .AN0             (AN0),
+    .AN1             (AN1),
+    .AN2             (AN2),
+    .AN3             (AN3)
 );
 
 endmodule

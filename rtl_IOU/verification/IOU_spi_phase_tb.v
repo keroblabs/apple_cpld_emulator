@@ -8,6 +8,8 @@ module IOU_spi_phase_tb (
     input         C01X_N,
     input         C0FX_N,
     input  [7:0]  dbus_in,
+    input         status_AN3,
+    input         DHIRES_state_n,
     input         spi_cs,
     input         spi_clk,
     input         spi_mosi,
@@ -17,7 +19,9 @@ module IOU_spi_phase_tb (
     output        kbd_pending_state,
     output        wr_pending_clear_req,
     output        rd_pending_set_req,
-    output        kbd_pending_set_req
+    output        kbd_pending_set_req,
+    output [7:0]  io_data_out,
+    output        io_data_en
 );
 
 wire [7:0] reg_wr_data;
@@ -32,6 +36,8 @@ wire       reg_kbd_pending_set;
 assign wr_pending_clear_req = reg_wr_pending_clr;
 assign rd_pending_set_req = reg_rd_pending_set;
 assign kbd_pending_set_req = reg_kbd_pending_set;
+assign io_data_out = dbus_out;
+assign io_data_en = dbus_en;
 
 IOU_iomem iomem (
     .RESET(RESET),
@@ -40,12 +46,12 @@ IOU_iomem iomem (
     .ADDR(ADDR),
     .D7_c01x(1'b0),
     .D7_c06x(1'b0),
-    .AN3(1'b0),
+    .AN3(status_AN3),
     .C01X_N(C01X_N),
     .C06X_N(1'b1),
     .C0FX_N(C0FX_N),
     .KBDSEL_n(1'b1),
-    .DHIRES_state_n(1'b1),
+    .DHIRES_state_n(DHIRES_state_n),
     .dbus_in(dbus_in),
     .dbus_out(dbus_out),
     .dbus_en(dbus_en),

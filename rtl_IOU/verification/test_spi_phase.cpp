@@ -100,6 +100,8 @@ public:
         dut.C01X_N = 1;
         dut.C0FX_N = 1;
         dut.dbus_in = 0;
+        dut.status_AN3 = 0;
+        dut.DHIRES_state_n = 0;
         dut.spi_cs = 1;
         dut.spi_clk = 0;
         dut.spi_mosi = 0;
@@ -235,6 +237,31 @@ public:
     }
 };
 
+static void test_iou_an3_status(PhaseHarness &h)
+{
+    h.at(h.now_ns() + 1, [](VIOU_spi_phase_tb &model) {
+        model.CPU_RW = 1;
+        model.C01X_N = 1;
+        model.C0FX_N = 1;
+        model.status_AN3 = 0;
+        model.DHIRES_state_n = 0;
+    });
+    h.wait_rising_edges(1);
+    check(h.dut.io_data_en == 0 && (h.dut.io_data_out & 0x80) == 0,
+          "IOU status read returns a low internal AN3 value", 0);
+
+    h.at(h.now_ns() + 1, [](VIOU_spi_phase_tb &model) {
+        model.status_AN3 = 1;
+    });
+    h.wait_rising_edges(1);
+    check(h.dut.io_data_en == 0 && (h.dut.io_data_out & 0x80) != 0,
+          "IOU status read still mirrors internal AN3 high", 0);
+
+    h.at(h.now_ns() + 1, [](VIOU_spi_phase_tb &model) {
+        model.DHIRES_state_n = 1;
+    });
+}
+
 static void test_one_phase(PhaseHarness &h, unsigned phase_ns)
 {
     h.cpu_write_mailbox();
@@ -274,6 +301,7 @@ int main(int argc, char **argv)
         h.attach_trace(&trace);
     }
     h.initialize(waveform_path ? &trace : nullptr);
+    test_iou_an3_status(h);
 
     for (unsigned phase = 0; phase < PHASE_COUNT; ++phase) {
         h.trace_phase(waveform_path && phase == TRACE_PHASE_NS);

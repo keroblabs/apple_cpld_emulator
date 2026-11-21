@@ -79,6 +79,52 @@ static uint16_t spi_exchange(cpld_data_t &cpld, uint8_t selector, uint8_t payloa
     return spi_slave_get_received_data(&context);
 }
 
+static void test_mmu_peripheral_outputs(cpld_data_t &cpld)
+{
+    check(p_model->CAS_OUT && p_model->SPK_OUT,
+          "MMU cassette and speaker outputs start in their reset state");
+
+    access(cpld, 0xC020);
+    check(!p_model->CAS_OUT, "Apple $C020 toggles the MMU cassette output low");
+    access(cpld, 0x0200);
+    check(!cpld.IOU.casout && cpld.IOU.casout == p_model->CAS_OUT,
+          "emulator captures the MMU cassette output");
+    access(cpld, 0xC020);
+    check(p_model->CAS_OUT, "a second Apple $C020 access toggles cassette high");
+    access(cpld, 0x0200);
+    check(cpld.IOU.casout && cpld.IOU.casout == p_model->CAS_OUT,
+          "emulator captures the updated cassette output");
+
+    access(cpld, 0xC030);
+    check(!p_model->SPK_OUT, "Apple $C030 toggles the MMU speaker output low");
+    access(cpld, 0x0200);
+    check(!cpld.IOU.spk && cpld.IOU.spk == p_model->SPK_OUT,
+          "emulator captures the MMU speaker output");
+    access(cpld, 0xC030);
+    check(p_model->SPK_OUT, "a second Apple $C030 access toggles speaker high");
+    access(cpld, 0x0200);
+    check(cpld.IOU.spk && cpld.IOU.spk == p_model->SPK_OUT,
+          "emulator captures the updated speaker output");
+
+    const uint16_t annunciator_addresses[] = {
+        0xC058, 0xC059, 0xC05A, 0xC05B,
+        0xC05C, 0xC05D, 0xC05E, 0xC05F
+    };
+    const uint8_t *annunciator_outputs[] = {
+        &p_model->AN0, &p_model->AN0,
+        &p_model->AN1, &p_model->AN1,
+        &p_model->AN2, &p_model->AN2,
+        &p_model->AN3, &p_model->AN3
+    };
+    for (unsigned i = 0; i < sizeof(annunciator_addresses) / sizeof(annunciator_addresses[0]); ++i) {
+        const bool set = annunciator_addresses[i] & 1;
+        access(cpld, annunciator_addresses[i], false);
+        check(*annunciator_outputs[i] == set,
+              set ? "Apple annunciator set address drives the MMU output high"
+                  : "Apple annunciator clear address drives the MMU output low");
+    }
+}
+
 static void test_spi_mailbox_and_keyboard(cpld_data_t &cpld)
 {
     access(cpld, 0xC0F1, false, 0xB6);
@@ -187,6 +233,7 @@ int main(int argc, char **argv)
     if (!read_export(argv[1], bytes)) {
         return 1;
     }
+    test_mmu_peripheral_outputs(cpld);
     test_spi_mailbox_and_keyboard(cpld);
     expect_rom(cpld, 0xC800, 0x00800, 0, 1); // No expansion owner at reset.
 

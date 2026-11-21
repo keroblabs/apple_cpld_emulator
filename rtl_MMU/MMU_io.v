@@ -22,11 +22,11 @@ module MMU_io (
     output          SW_80STORE,
 
     output          SW_PAGE2,
-    output          SW_HIRES
-    //output          AN0,
-    //output          AN1,
-    //output          AN2,
-    //output          AN3
+    output          SW_HIRES,
+    output          AN0,
+    output          AN1,
+    output          AN2,
+    output          AN3
 
 );
 
@@ -34,11 +34,6 @@ module MMU_io (
 assign      CAS_OUT          = casout_internal;
 assign      SPK_OUT          = spk_internal;
 `endif 
-
-wire        AN0_unused;
-wire        AN1_unused;
-wire        AN2_unused;
-wire        AN3_unused;
 
 `ifdef SPK_IN_MMU
 wire        C02X, C03X;
@@ -104,10 +99,10 @@ TTL_ls259 my_ls259_c05x (
     .Q1     (SW_MIXED_unused),
     .Q2     (SW_PAGE2),
     .Q3     (SW_HIRES),
-    .Q4     (AN0_unused),
-    .Q5     (AN1_unused),
-    .Q6     (AN2_unused),
-    .Q7     (AN3_unused)
+    .Q4     (AN0),
+    .Q5     (AN1),
+    .Q6     (AN2),
+    .Q7     (AN3)
 );
 
 IOU_exp16 u_IOU_exp16 (

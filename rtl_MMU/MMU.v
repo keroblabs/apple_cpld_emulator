@@ -44,12 +44,11 @@ module MMU (
     output          C0XX_N_OUT,
     output          IOSEL_OUT_N,
     output          C6XX_N,
-    output          IOSTB_N
-
-    //output          AN0,
-    //output          AN1,
-    //output          AN2,
-    //output          AN3
+    output          IOSTB_N,
+    output          AN0,
+    output          AN1,
+    output          AN2,
+    output          AN3
 
 );
 
@@ -138,11 +137,11 @@ MMU_io u_IOU_common (
     .SW_80STORE      (SW_80STORE),
 
     .SW_PAGE2        (SW_PAGE2),
-    .SW_HIRES        (SW_HIRES)
-    //.AN0             (AN0),
-    //.AN1             (AN1),
-    //.AN2             (AN2),
-    //.AN3             (AN3)
+    .SW_HIRES        (SW_HIRES),
+    .AN0             (AN0),
+    .AN1             (AN1),
+    .AN2             (AN2),
+    .AN3             (AN3)
 );
 
 `ifdef ADD_UART
