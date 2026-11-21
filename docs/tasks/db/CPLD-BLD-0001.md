@@ -53,6 +53,10 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 - **2026-11-21 — Real devel→devel-rtl fitting (owner report):** After pulling the cross-directory MMU source fix, the owner supplied complete FIT utilisation summaries for both independently fitted physical tops. IOU: 108/128 macrocells, 83/128 flip-flops, 36/64 user I/O, 14 foldbacks, 112/128 nodes+FB/MCs, 10 cascades, 365 product terms; MMU: 42/128 macrocells, 17/128 flip-flops, 39/64 user I/O, 3 foldbacks, 42/128 nodes+FB/MCs, 3 cascades, 133 product terms. Both summaries report `$Device PLCC84 fits; JTAG ON; Secure OFF`. This is owner-executed build evidence, *not* an independently executed test here. Build run directories, define variants, detailed timing and pin files were not provided; the hardware feasibility review remains with [CPLD-HW-0004](CPLD-HW-0004.md).
 
 
+- **2026-11-21 — Owner-requested artifact naming:** Replace random local output names such as `build/rtl-cpld/IOU.4NGRjJN7` with `build/rtl-cpld/IOU_YYYYMMDD_HHMMSS` and equivalent MMU folders. The timestamp is generated with `date +%Y%m%d_%H%M%S` on `devel` using the local timezone. Atomic `mkdir` prevents clobbering; duplicate names retry with `_01`, `_02`, etc. Existing results are never renamed or deleted. Remote isolated workspace naming remains unchanged.
+- **2026-11-21 — Validation (isolated, no real CPLD rebuild):** `bash -n scripts/build-cpld.sh scripts/remote-fit-cpld.sh tests/test_remote_build.sh` passed. `bash tests/test_remote_build.sh` passed **12/12 mock groups**, including original MMU/IOU isolation, shared dependencies, optional defines, bad SSH/Yosys/fitter handling, exact timestamp naming, same-second collisions preserving older `.jed` files, and malformed timestamp rejection. These are deterministic mock tests; no new `devel-rtl` synthesis or physical programming was executed for the naming-only change.
+- **2026-11-21 — Implementation commit:** `rtl-compile-work` `d48133b` changes the build script, tests and operator documentation; follow-up ticket commit records this evidence. Status remains REVIEW pending owner acceptance.
+
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
@@ -60,6 +64,7 @@ The authoritative Apple CPLD RTL source is developed on `devel`; Yosys 0.63, `at
 | `cpld-bld-0001-remote-rtl` | `7aa2d55` | UNREVIEWED | Ticket and index entry (local patch-series SHA; changes on application) |
 | `cpld-bld-0001-remote-rtl` | `33068f6` | UNREVIEWED | Remote build driver, isolated tests and operator documentation (local patch-series SHA; changes on application) |
 | `rtl-compile-work` | `4a5c4ca` | UNREVIEWED | MMU shared dependency transfer, 10-group regression suite, and documentation committed directly to requested branch |
+| `rtl-compile-work` | `d48133b` | UNREVIEWED | Timestamped output directory naming, collision-safe mkdir, and expanded 12-group tests |
 
 **Resolution Description**
 
