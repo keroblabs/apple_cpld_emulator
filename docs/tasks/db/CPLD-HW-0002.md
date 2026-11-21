@@ -32,6 +32,8 @@ This is an **RTL and emulator software implementation ticket**. Hardware layout/
 - **2026-11-21 — Fitter evidence:** `yosys`, `atf15xx_yosys` and `fit1508` are unavailable in this environment, and no fitter script was found under `/home/marcio/Tools`. The checked-in `rtl_MMU/MMU.fit` and `rtl_IOU/IOU.fit` are historical baseline reports from November 2025, not results for this revision. ATF1508ASV macrocells, pin allocation and timing remain unverified; keep this ticket in REVIEW pending the actual fitter run and flash-update design review.
 - **2026-11-21 — Owner-requested build and verification retest:** From `rtl_IOU_MMU_TB/`, `./build.sh IOU_MMU_tb.v` freshly rebuilt the 18-module Verilator model. `cmake --build build --clean-first --parallel 2` then rebuilt and linked `apple_cpld` successfully (100%). `bash rtl_MMU/verification/run_tests.sh` passed 787 checks / 0 failures in both default and `FULL_MMU_ADDR` builds. `bash emulator/onboard/verification/run_tests.sh` passed 33 ROM-backing checks and 30,010 combined ROM-bus checks / 0 failures in each address build; exported images matched. `bash rtl_IOU/verification/run_spi_tests.sh` passed 59 checks / 0 failures.
 
+- **2026-11-21 — Independent review (GPT-6):** Inspected commit `2fbb9eb` and the current branch: `MMU_addr.v` qualifies the two shared strobes with reset released, DMA ownership, PHI_0 high, direction and existing selects; `MMU.v` and the combined Verilator top expose exactly those outputs. The C++ capture and `memory_controller.c` consume the sampled bus strobe plus select, and the changed ROM-bus tests explicitly probe mismatched caller direction. The SPI interface and existing memory map are untouched by this ticket. **The implemented bus-strobe code is APPROVED; no code changes requested.** Owner reports manual PR#3/PR#0 success, and developer records repeated Verilator build, 787 MMU checks (both builds), 30,010 ROM-bus checks per build and preserved 128 KiB image hash; reviewer inspected sources and test evidence but did **not independently execute** the test suite. **Ticket remains REVIEW** because no revised ATF1508ASV synthesis/fitter/timing evidence exists and the parallel NOR update route is only a documented gap: current `BUS_WR_N` is RAM-only, `ROM_EN_N` is read-qualified, and the emulator intentionally has no flash-command model. The SST39VF010's physical programmability must not be confused with a working CPLD programming interface. Resolve the update-path scope with the owner, document/test the authorised flash select/grant or explicitly create an approved follow-on, and attach a current fitter report before resolving this ticket. No PCB design is required here.
+
 **Proposed Change**
 
 ### 1. Existing selects plus common bus strobes
@@ -76,20 +78,20 @@ Run the available Yosys/`atf15xx_yosys` and fitter flow for the **actual intende
 
 **Acceptance criteria / evidence**
 
-- [ ] Exactly **two** new RTL pins (`BUS_RD_N`, `BUS_WR_N`) appear in both Verilator variants; no `SRAM_*_N` or `FLASH_*_N` per-device strobe pins are added.
-- [ ] Existing SRAM/flash selects retained; truth table and qualifiers cover both directions, flash-owned card ROM cases and optional external slot6 correctly.
+- [x] Exactly **two** new RTL pins (`BUS_RD_N`, `BUS_WR_N`) appear in both Verilator variants; no `SRAM_*_N` or `FLASH_*_N` per-device strobe pins are added.
+- [x] Existing SRAM/flash selects retained; truth table and qualifiers cover both directions, flash-owned card ROM cases and optional external slot6 correctly.
 - [ ] `BUS_RD_N` and `BUS_WR_N` are never active simultaneously; reset, idle and bus transitions are deterministic and free of unintended pulses.
 - [ ] Emulator consumes the RTL outputs with the existing selects and passes full Apple IIe, RAM switching, slot-ROM, IOMEM/keyboard and Disk II regressions.
 - [ ] Flash write/update capability is **not designed out**; a valid flash-selection/program-command path is documented and tested where implemented, or the missing path is explicitly captured as a blocker/follow-on (never misreported as implemented).
-- [ ] Default ROM backing and the 131072-byte `-w` export remain byte-identical before any explicit runtime update; upper bank policy unchanged.
+- [x] Default ROM backing and the 131072-byte `-w` export remain byte-identical before any explicit runtime update; upper bank policy unchanged.
 - [ ] ATF1508ASV synthesis/fitter, external pin usage and timing evidence attached. Physical PCB fabrication and electrical tests are not acceptance criteria.
 
 **Commits**
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
-| `cpld-hw-0001-0003-tickets` | `2fbb9eb` | `UNREVIEWED` | Add shared bus strobes, capture and consume them in the emulator; verify both MMU address builds and combined ROM-bus regressions. |
+| `cpld-hw-0001-0003-tickets` | `2fbb9eb` | `APPROVED` | Add shared bus strobes, capture and consume them in the emulator; verify both MMU address builds and combined ROM-bus regressions. |
 
 **Resolution Description**
 
-Digital RTL/emulator implementation and the focused MMU/ROM-bus regressions are presented for review. Pending full Apple IIe regressions, an approved and tested flash-update route, and ATF1508ASV fitter/resource/timing evidence. No physical hardware design or in-system flash-programming protocol change is included.
+Independent code review **APPROVES commit `2fbb9eb`**, supported by developer regressions and owner manual PR#3/PR#0. The ticket remains **REVIEW** pending current ATF1508ASV synthesis/fitter/resource/timing evidence and owner disposition of the currently missing authorised NOR flash-update route. Full physical timing and board work are separate. No physical hardware design or in-system flash-programming protocol change is included.
