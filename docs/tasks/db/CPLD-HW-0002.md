@@ -87,6 +87,7 @@ Run the available Yosys/`atf15xx_yosys` and fitter flow for the **actual intende
 
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
+| `cpld-hw-0001-0003-tickets` | `2fbb9eb` | `UNREVIEWED` | Add shared bus strobes, capture and consume them in the emulator; verify both MMU address builds and combined ROM-bus regressions. |
 
 **Resolution Description**
 
