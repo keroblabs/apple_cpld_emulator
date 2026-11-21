@@ -1,5 +1,4 @@
 #include "board.h"
-#include "apple2rom.h"
 
 #include "rtl_cpu_65816.h"
 #include "rtl_video.h"
@@ -53,7 +52,7 @@ static timer_data_t benchmark_ms;
 static rtl_access_t rtl_context;
 static rtl_video_t  rtl_video;
 
-static cpld_model_t cpld_model;
+static cpld_data_t cpld_model;
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +85,7 @@ static void board_benchmark( void )
 }
 
 #if 0
-static void board_speaker_control( cpld_model_t * cpld )
+static void board_speaker_control( cpld_data_t * cpld )
 {
     if( cpld->IOU.prev_spk != cpld->IOU.spk )
     {
@@ -96,7 +95,7 @@ static void board_speaker_control( cpld_model_t * cpld )
 }
 #endif
 
-static void board_paddle_control( cpld_model_t * cpld )
+static void board_paddle_control( cpld_data_t * cpld )
 {
     uint8_t paddle_0 = 128;
     uint8_t paddle_1 = 128;
@@ -119,7 +118,7 @@ static void board_paddle_control( cpld_model_t * cpld )
     if( ( cpld->IOU.cycles_pdl_3 != 0 ) && ( cpld->MMU.clock_counter > cpld->IOU.cycles_pdl_3 ) ) cpld->IOU.cycles_pdl_3 = 0;
 }
 
-static void board_bus_address( rtl_access_t * state, cpld_model_t * cpld )
+static void board_bus_address( rtl_access_t * state, cpld_data_t * cpld )
 {
     if( state->cpu_halt == CPU_HALT_NONE )
     {
@@ -144,10 +143,11 @@ static void board_bus_address( rtl_access_t * state, cpld_model_t * cpld )
 
 void board_startup( void )
 {
+    memory_controller_init();
+
     rtl_model_reset();
     memset( &cpld_model, 0x00, sizeof( cpld_model ) );
-
-    memory_controller_init();
+    rtl_model_state_reset( &cpld_model );
 
     // connect the RTL co-simulation
     rtl_init_65816( &rtl_context );
@@ -173,11 +173,9 @@ void board_startup( void )
     cpld_model.IOU.pdl_strobe = TRUE;
     cpld_model.IOU.C0XX_N = TRUE;
     cpld_model.IOU.spi_pending = FALSE;
-    cpld_model.IOU.spi_state = 0;
+    cpld_model.IOU.spi_slave_state = SPI_SLAVE_STATE_IDLE;
 
     cpld_model.MMU.C0XX_N = TRUE;
-
-    //cpld_model.MMU.kbd_strobe = TRUE;
 }
 
 void board_reset( void )

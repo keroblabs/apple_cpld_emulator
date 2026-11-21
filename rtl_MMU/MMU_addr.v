@@ -59,46 +59,28 @@ assign addr_12      = (DXXX_INT & exp16_ram_en) ? EXP16_BANK : ADDR[12];
 
 assign C6XX_N               = ~(ADDR[10] & ADDR[9] & ~ADDR[8] & IOSEL_INT_map);
 
-assign MEM_ADDR_OUT         = mem_addr_out_reg;
-
-assign ROM_EN_N             = ~rom_enabled & onboard_fw_n;
+assign ROM_EN_N             = ~rom_enabled & (onboard_fw_n | ~CPU_RW);
 assign RAM_EN_N             = ~ram_enabled;
 
 wire        ram_enabled;
 wire        rom_enabled;
 wire        exp16_ram_en    = CPU_RW ? EXP16_RAM : EXP16_WRITE;
 wire        onboard_fw_n    = (IOSEL_N & IOSTB_N) | MODE_SEL;
+wire        slot_rom_read   = CPU_RW & ~rom_enabled & (IOSEL_INT_map | IOSTB_INT_map);
+
+// Keep the internal Apple image at its CPU addresses. A slot card sees a
+// 4 KiB window, even when MODE_SEL selects the external-card ROM path.
+wire [4:0] mem_addr_upper = ram_enabled   ? {addr_16, ADDR[15:13], addr_12} :
+                            rom_enabled   ? {1'b0, ADDR[15:12]} :
+                            slot_rom_read ? {2'b00, slot_index} : 5'd0;
 
 `ifdef FULL_MMU_ADDR
-reg [16:0]  mem_addr_out_reg;
+// IOSEL uses +$000..+$0FF. IOSTB retains the +$800..+$FFF CPU offset.
+wire [11:0] mem_addr_lower = (slot_rom_read & IOSEL_INT_map) ? {4'd0, ADDR[7:0]} :
+                             (ram_enabled | rom_enabled | slot_rom_read) ? ADDR[11:0] : 12'd0;
+assign MEM_ADDR_OUT = {mem_addr_upper, mem_addr_lower};
 `else
-reg [4:0]   mem_addr_out_reg;
-`endif
-
-`ifdef FULL_MMU_ADDR
-always @(*) begin
-    if( ram_enabled) begin
-        mem_addr_out_reg  = { addr_16, ADDR[15:13], addr_12, ADDR[11:0] };
-    end else if( rom_enabled ) begin
-        mem_addr_out_reg  = { 1'b0, ADDR[15:12], ADDR[11:0] };
-    end else if( ~onboard_fw_n ) begin
-        mem_addr_out_reg  = { 2'b00, slot_index, ADDR[11:0] };
-    end else begin
-        mem_addr_out_reg  = 16'd0;
-    end
-end
-`else
-always @(*) begin
-    if( ram_enabled) begin
-        mem_addr_out_reg  = { addr_16, ADDR[15:13], addr_12 };
-    end else if( rom_enabled ) begin
-        mem_addr_out_reg  = { 1'b0, ADDR[15:12] };
-    end else if( ~onboard_fw_n ) begin
-        mem_addr_out_reg  = { 2'b00, slot_index };
-    end else begin
-        mem_addr_out_reg  = 5'b0;
-    end
-end
+assign MEM_ADDR_OUT = mem_addr_upper;
 `endif
 
 MMU_mem_map u_address_signals (

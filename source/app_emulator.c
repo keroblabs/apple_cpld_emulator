@@ -1,6 +1,6 @@
 #include "graphics.h"
 #include "draw.h"
-#include "rtl_interface.h"
+#include "rtl_model.h"
 
 #include "board.h"
 #include "sw_switch.h"
@@ -13,6 +13,10 @@
 #include "sdl_main.h"
 
 #include "keyboard_controller.h"
+#include "rom_backing.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -29,9 +33,20 @@ static void video_thread_handler( void )
     }
 }
 
-int main( void )
+int main( int argc, char **argv )
 {
-    rtl_interface_init();
+    const char *rom_output_path = NULL;
+    if( argc == 3 && strcmp( argv[1], "-w" ) == 0 && argv[2][0] != '\0' )
+    {
+        rom_output_path = argv[2];
+    }
+    else if( argc != 1 )
+    {
+        fprintf( stderr, "Usage: %s [-w IMAGEFILE]\n", argv[0] );
+        return EXIT_FAILURE;
+    }
+
+    rtl_model_init();
     timer_Init();
     
     graphics_init();
@@ -43,6 +58,17 @@ int main( void )
     // initialize board
     input_drv_init();
     board_startup();
+    if( rom_output_path )
+    {
+        if( rom_backing_write_image( rom_output_path ) != 0 )
+        {
+            fprintf( stderr, "Cannot write ROM image '%s'.\n", rom_output_path );
+            lcd_driver_deinit();
+            heap_mngr_deinit();
+            return EXIT_FAILURE;
+        }
+        printf( "Wrote ROM image '%s' (%u bytes)\n", rom_output_path, ROM_BACKING_SIZE );
+    }
     keyboard_controller_init();
 
     video_thread = tthread_create( video_thread_handler );
@@ -60,4 +86,5 @@ int main( void )
     tthread_sleep_ms( 1000 );
     lcd_driver_deinit();
     heap_mngr_deinit();
+    return EXIT_SUCCESS;
 }

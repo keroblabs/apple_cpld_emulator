@@ -27,6 +27,11 @@ add_definitions("-Wall")
 
 set(SOURCE_FILES        ../cpld/rtl_model.cpp
                         ../cpld/rtl_interface.cpp
+                        ../cpld/rtl_cpu_bus.cpp
+                        ../cpld/rtl_memory_bus.cpp
+                        ../cpld/rtl_interconnect.cpp
+                        ../cpld/rtl_spi_slave.cpp
+                        
                         #../self_test/rtl_self_test.cpp
                         #../self_test/rtl_self_test_MMU.cpp
                         #../self_test/rtl_self_test_CPLD.cpp
@@ -35,6 +40,7 @@ set(SOURCE_FILES        ../cpld/rtl_model.cpp
                         ../emulator/onboard/keyboard_controller.c
                         ../emulator/onboard/spi_controller.c
                         ../emulator/onboard/memory_controller.c
+                        ../emulator/onboard/rom_backing.c
                         ../emulator/onboard/iomem_controller.c
 
                         ../emulator/rtl_cpu_65816/rtl_cpu_65816.c
