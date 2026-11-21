@@ -6,13 +6,15 @@
 
 The task rows below give the current status of each ticket; design and implementation approvals are tracked in each individual ticket. See each ticket's detailed dependencies and acceptance criteria. Core workstreams: **M1** ROM mapping and hardware ROM-read strategy → **M2** slot7 ProDOS firmware; **M3** IOMEM protocol and hard-disk service can proceed alongside M1/M2 → **M4** image integration and ProDOS boot verification.
 
+**2026-11-21 review update:** CPLD-ROM-0001/0002/0003 accepted for emulator integration (`RESOLVED`) after owner `PR#3`/`PR#0` and slot-pattern verification. CPLD-ROM-0004 software export is approved but remains `REVIEW` until device programming/readback and populated slot7/IOMEM acceptance; CPLD-HW-0001 remains `OPEN` for the electrical design. Integration/merging is owner-controlled.
+
 ## CPLD-ROM — ROM mapping and flash layout
 
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
-| `CPLD-ROM-0001` | TASK | REVIEW | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
-| `CPLD-ROM-0002` | TASK | REVIEW | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
-| `CPLD-ROM-0003` | TASK | REVIEW | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
+| `CPLD-ROM-0001` | TASK | RESOLVED | Verify MMU slot ROM address generation and control signals | M1 — ROM mapping | [Details](db/CPLD-ROM-0001.md) |
+| `CPLD-ROM-0002` | TASK | RESOLVED | Specify slot ROM and expansion ROM flash layout | M1 — ROM mapping | [Details](db/CPLD-ROM-0002.md) |
+| `CPLD-ROM-0003` | TASK | RESOLVED | Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT | M1 — ROM mapping | [Details](db/CPLD-ROM-0003.md) |
 | `CPLD-ROM-0004` | TASK | REVIEW | Produce and emulate one programmer-ready DIP32 flash image | M1 — ROM mapping | [Details](db/CPLD-ROM-0004.md) |
 
 ## CPLD-HW — STM32 / CPLD hardware topology

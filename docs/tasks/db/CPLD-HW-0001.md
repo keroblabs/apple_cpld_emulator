@@ -33,6 +33,8 @@ CPU reads.
 - **2026-11-21 — ROM map reconciliation:** With the 5-bit MMU address interface, card IOSEL uses CPU A7–A0 with physical A10–A8 cleared. Verify the physical low-address selection and the ROM/card enable policy against rev 3, including `C6XX_N` and DIP32 chip capacity.
 - **2026-11-21 — Target image size:** The expected hardware contents are the exact 256 KiB startup backing exported by the emulator with `-w`. Verify the part, address wiring and programmer readback against that file.
 
+- **2026-11-21 — ROM review handoff:** The emulator's six per-slot patterns and default image have been verified by the owner, and ROM-0001/0002/0003 are accepted as software. Physical DIP32 acceptance remains OPEN: a 256 KiB flash requires 18 address bits. Current MMU signal exposes only 5 upper bits by default or 17 bits total in the FULL configuration, while actual ROM-read addresses presently occupy 0x00000–0x0FFFF and 0x10000–0x3FFFF are zero-filled. Document the intended physical A16/A17 high-line state, source for A0–A11 (including IOSEL clearing A10–A8), select of internal/slot ROM for OE/CE, contention with C6XX_N, and read timing. Test with a populated target before hardware acceptance.
+
 **Proposed Change**
 
 ### Mandatory DIP32 flash-image integration

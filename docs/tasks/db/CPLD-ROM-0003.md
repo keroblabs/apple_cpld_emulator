@@ -1,7 +1,7 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `REVIEW`\
+**Status:** `RESOLVED`\
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
@@ -49,6 +49,16 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 | ROM3-R7, partial mutation | The backing is assembled before export. The writer replaces the destination after the complete image is written and closed. A forced short write preserves the previous file. |
 | ROM3-R8, packaging and integration | The emulator exports its startup backing directly, and both combined bus builds compare real MMU reads with that file. Physical readback remains in CPLD-ROM-0004. |
 
+### Independent final review — 2026-11-21 (accepted)
+
+**Disposition: APPROVED / RESOLVED.** The emulator is a development tool with its ROM inputs **compiled in**. `slot_roms.h` provides six `#ifndef SLOTn_ROM` guarded 4096-byte zero defaults; `rom_backing.c` statically asserts every array's length and creates one 262,144-byte backing. It copies the Apple ROM to `0x08000`, copies slot arrays to `N*0x1000`, leaves slots 0/3 and high reserved address space zero, and serves memory through sampled MMU physical addresses. Runtime input-ROM loading/overlays have been eliminated in favour of compiled sources.
+
+**Tests and owner verification:** Developer reports 19 default-backing checks, 29,987 combined bus assertions in **each** Verilator address configuration, the whole-image export comparison, Apple prompt and Disk II fixture bootstrap. Owner confirms the emulator runs, `PR#3` then `PR#0` works, and verifies IOSEL/IOSTB slot ROM pattern mapping. The developer's documented desktop pattern sweep exercised 13,839 guest reads, including all 13,824 accessible bytes in the six compiled slot windows, with matching exported image hash. Source/test review complete; reviewer did not independently run toolchain.
+
+**Review notes:** `-w IMAGEFILE` writes the same initialized backing used by the CPU, and with no `-w` the emulator creates no ROM image. `rom_backing_write_image` writes into a temporary sibling file and renames it only after closing the complete export; this avoids publishing partial output on ordinary failures. The slot-6 internal ROM remains at the original Apple offsets when selected, and an optional compiled slot-6 card image is separate.
+
+**Boundary:** Exact physical DIP32 wiring/readback, and future ProDOS slot7/IOMEM, are NOT claims of this ticket and remain open in ROM-0004/HW-0001/TEST-0001.
+
 **Notes**
 
 - **2026-11-21 — Owner directive / DIP32 single-image handoff:** Developer must support loading **the identical raw file sent to the DIP32 programmer** into the emulator. The current `rom_backing_init` + baseline migration + `*.romimg` overlays remain development-only and do not demonstrate raw-image equivalence. Existing owner `PR#3` / `PR#0` verification remains valid for baseline mode, but must be repeated in raw-image mode.
@@ -90,6 +100,9 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 - **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` after compiled-ROM startup, slot probes and image export verification.
 - **2026-11-21 — Slot-pattern verification:** Built a temporary desktop emulator from `cb48562` with compiled overrides for slots 1, 2, 4, 5, 6 and 7. Slot `N` used `0xD0 + N` for all 256 IOSEL bytes and `0xA0 + N` for all 2048 IOSTB bytes. The padding and unused windows were zero-filled. An Applesoft `PEEK` sweep drove 13,839 guest CPU reads through the real scheduler and memory controller, including all 13,824 bytes of the six slot windows visible to the CPU. Every `$CFFF` read returned the selected expansion byte, and the next `$C800` read returned zero from slot 0. Internal slot 3 returned the Apple ROM bytes and its external window returned zero. The `-w` export matched the independently generated 262144-byte image with SHA-256 `e1c94f46f6ceed37478c6e12b80ca855dc58e675f93b5baeb5793b0e7bdd471a`. The same patterns passed 29,987 combined bus checks in each address variant. Environment was Fedora 42, GCC 15.2.1, CMake 3.31.6, SDL 2.33.0 dummy video for desktop startup, and Verilator 5.045.
 
+- **2026-11-21 — Independent Acceptance Review:** Approved the compiled-in ROM defaults, static size assertions, backing image assembly, export-only CLI and actual sampled MMU ROM reads. Owner's reported runtime/pattern verification closes software acceptance. No implementation rework requested.
+- **2026-11-21 — Status Change:** `REVIEW → RESOLVED`; reviewed implementation accepted. Integration/owner merge remains necessary for `CLOSED`.
+
 **Proposed Change**
 
 Supply the shared backing from the compiled arrays in
@@ -110,13 +123,15 @@ with the startup export from the same backing.
 | `mmu-rom-analysis` | `2cdcba6` | `CHANGES_REQUESTED` | Independent re-review of `3c4468c`, including ROM3-R5 through ROM3-R8 |
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Add the same-file raw startup acceptance gate |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
-| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
-| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile the reviewer findings and carry forward raw-file startup |
+| `mmu-rom-analysis` | `174966e` | `APPROVED` | Add raw ROM backing and slot-load API with combined bus and startup verification |
+| `mmu-rom-analysis` | `8715356` | `APPROVED` | Reconcile the reviewer findings and carry forward raw-file startup |
 | `mmu-rom-analysis` | `5184c00` | `SUPERSEDED` | Boot directly from a flat ROM file and verify raw device reads and desktop startup |
-| `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record the compiled ROM and export-only CLI scope |
-| `mmu-rom-analysis` | `8df4a4f` | `UNREVIEWED` | Load the compiled ROM arrays and verify both MMU builds and desktop startup |
+| `mmu-rom-analysis` | `562ce53` | `APPROVED` | Record the compiled ROM and export-only CLI scope |
+| `mmu-rom-analysis` | `8df4a4f` | `APPROVED` | Load the compiled ROM arrays and verify both MMU builds and desktop startup |
 
 **Resolution Description**
+
+**Accepted ${today}:** The software now assembles its ROM image deterministically from compiled arrays, executes from that backing and optionally exports it with `-w IMAGEFILE`. No input-ROM CLI remains. Emulator runtime, owner `PR#3`/`PR#0`, card ROM pattern mapping, and developer regression evidence accepted. RESOLVED, pending integration/merge; hardware readback is intentionally excluded.
 
 The emulator now boots from the compiled arrays and can export its populated
 backing. Chip readback remains in CPLD-ROM-0004. Slot-7 ProDOS boot and IOMEM

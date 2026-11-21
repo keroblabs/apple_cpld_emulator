@@ -1,7 +1,7 @@
 # CPLD-ROM-0002 — Specify slot ROM and expansion ROM flash layout
 
 **ID:** `CPLD-ROM-0002`  
-**Status:** `REVIEW`\
+**Status:** `RESOLVED`\
 **Title:** Specify slot ROM and expansion ROM flash layout
 
 **Description**
@@ -43,6 +43,14 @@ ROM defines the corresponding macro and the array before the fallback.
 | ROM2-R4 and ROM2-R6, example offsets and metadata validation | The raw slot rework supersedes the three-entry example and descriptor validation. All destination ranges are fixed. The release image is a flat file whose offsets are the physical ROM addresses. |
 | ROM2-R5, exact CFFF data and phase | The map records the selected slot's `+0xFFF` byte at CFFF and release on the next cycle. ROM1-R4 has direct Verilator assertions and a combined bus test. |
 
+### Independent final review — 2026-11-21 (accepted)
+
+**Disposition: APPROVED / RESOLVED.** `docs/rom-memory-map.md` rev 4 reflects the owner-approved **256 KiB contiguous binary assembled from compiled sources**: slot windows 0–7 each occupy 4096 bytes, the six included slot arrays are 1/2/4/5/6/7, slots 0 and 3 contain no card image, and the unmodified Apple 32 KiB image begins at `0x08000`. Each card IOSEL is at slot offset `0x000–0x0FF`; its IOSTB is at `0x800–0xFFF`. The prior tagged `CPRM` format and the earlier IOSEL `slot<<8` offset are superseded.
+
+**Evidence:** Source inspection of `rom_backing_init`, `slot_roms.h`, MMU address/strobe RTL, combined bus tests, and ROM export comparisons. Developer reports default and overridden image parity; owner reports successful `PR#3`/`PR#0` and full pattern checks across all populated slot windows. No independent local toolchain execution by reviewer. The exported 256 KiB layout is accepted as the software image contract.
+
+**Boundary:** Physical flash part, A16/A17 address wiring, voltage/timing, full-chip programmed/readback parity and populated slot7 firmware remain explicitly unverified, tracked in CPLD-HW-0001/ROM-0004/TEST-0001.
+
 **Notes**
 
 - **2026-11-21 — Owner directive / DIP32 single-image handoff:** The per-slot 4 KiB logical map stays intact, but the deliverable is **one raw DIP32 flash file** whose offsets *are physical ROM addresses*. A `CPRM`/metadata-bearing `*.romimg` is only a development container; it MUST NOT be treated as a programmer-ready image or loaded as a substitute during final emulator verification.
@@ -67,6 +75,9 @@ ROM defines the corresponding macro and the array before the fallback.
 - **2026-11-21 — Owner directive and status change:** `REVIEW → IN_PROGRESS` to document the compiled Apple and slot arrays. Slots 1, 2, 4, 5, 6 and 7 have 4096-byte inputs. Slots 0 and 3 have no slot input. The full 256 KiB backing is the target ROM image.
 - **2026-11-21 — Verification and status change:** `IN_PROGRESS → REVIEW` for rev 4. The default and overridden builds emit the exact documented Apple, slot and fill bytes in a 262144-byte file. The separately compiled slot-6 fixture begins at `0x06000`, and selecting internal slot 3 still uses `apple_rom_bin[]`.
 
+- **2026-11-21 — Independent Acceptance Review:** Approved rev-4 per-slot and system layout, built-in default image policy and fixed physical offsets. Superseded tagged-image format objections no longer apply. Hardware acceptance intentionally deferred.
+- **2026-11-21 — Status Change:** `REVIEW → RESOLVED`; reviewed implementation accepted. Integration/owner merge remains necessary for `CLOSED`.
+
 **Proposed Change**
 
 Review rev 4 of [the ROM map](../../rom-memory-map.md) as the contract for
@@ -87,12 +98,14 @@ and programming verification.
 | `mmu-rom-analysis` | `2cdcba6` | `CHANGES_REQUESTED` | Independent re-review of `26f6c06`, with ROM2-R4 through ROM2-R6 |
 | `mmu-rom-analysis` | `22285ea` | `UNREVIEWED` | Record the single-image DIP32 and emulator acceptance gate |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
-| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Specify the 256 KiB backing and each raw slot binary's file and memory offsets |
-| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile rev 3 offsets with the single-file release contract |
-| `mmu-rom-analysis` | `562ce53` | `UNREVIEWED` | Record the compiled inputs and start rev 4 |
-| `mmu-rom-analysis` | `8df4a4f` | `UNREVIEWED` | Document rev 4 and verify the compiled inputs at their target offsets |
+| `mmu-rom-analysis` | `174966e` | `APPROVED` | Specify the 256 KiB backing and each raw slot binary's file and memory offsets |
+| `mmu-rom-analysis` | `8715356` | `APPROVED` | Reconcile rev 3 offsets with the single-file release contract |
+| `mmu-rom-analysis` | `562ce53` | `APPROVED` | Record the compiled inputs and start rev 4 |
+| `mmu-rom-analysis` | `8df4a4f` | `APPROVED` | Document rev 4 and verify the compiled inputs at their target offsets |
 
 **Resolution Description**
+
+**Accepted ${today}:** The emulator's logical 256 KiB ROM layout and six slot-array convention are approved. The output-file implementation is covered by ROM-0003/ROM-0004; physical programming and slot7 firmware remain separate acceptance gates. Ticket is RESOLVED, pending integration/merge.
 
 Rev 4 documents the compiled sources, byte offsets, reserved windows and
 256 KiB export. Physical ROM timing remains in CPLD-HW-0001.

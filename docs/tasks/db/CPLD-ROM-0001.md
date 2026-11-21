@@ -1,7 +1,7 @@
 # CPLD-ROM-0001 — Verify MMU slot ROM address generation and control signals
 
 **ID:** `CPLD-ROM-0001`  
-**Status:** `REVIEW`\
+**Status:** `RESOLVED`\
 **Title:** Verify MMU slot ROM address generation and control signals
 
 **Description**
@@ -60,6 +60,14 @@ sampled ROM and slot strobes, including the dedicated slot-6 decode. The
 | ROM1-R3, external slot-6 compatibility | `C6XX_N` asserts for internal and external C6xx reads. On an external C6xx read, `ROM_EN_N` stays high in both modes. The emulator's disk I/O handoff at `$C0EC` is tested. Physical bus ownership remains a CPLD-HW-0001 deliverable. |
 | ROM1-R4, exact CFFF byte | Review `2cdcba6` found that the old selector cleared on the CFFF transfer's rising edge. The replacement retains the selected slot through the sampled high phase. The tests assert `$7FFF` (slot 7), `$5FFF` (slot 5 in mode 0) and the released `$0800` address on a following C800 read. |
 
+### Independent final review — 2026-11-21 (accepted for emulator integration)
+
+**Disposition: APPROVED / RESOLVED.** `MMU_addr.v`, `MMU_slot_ctrl.v`, `MMU_mem_select.v` and `rtl_interconnect.cpp` now distinguish the internal Apple Cx ROM from card ROM, map each card's IOSEL `Cn00–CnFF` page to slot-window offset `0x000–0x0FF`, and map selected IOSTB `C800–CFFF` to `+0x800–+0xFFF`. The selected card's CFFF byte is returned before release at the next bus cycle. The default upper-address mode and FULL_MMU_ADDR path reconstruct the same addresses. The external slot-6 decode remains independent, and physical electrical bus arbitration stays assigned to CPLD-HW-0001.
+
+**Evidence:** Developer reports 462 MMU assertions per configuration plus 29,987 combined bus assertions per configuration passing. The owner ran the emulator, successfully performed `PR#3`/`PR#0`, and verified all six slot IOSEL/IOSTB pattern regions. Reviewed source/tests; no independent Verilator execution by reviewer in this environment. No software change requested.
+
+**Boundary:** Acceptance covers the RTL/emulator mapping, not physical DIP32 address/control wiring or slot7 ProDOS. See [CPLD-HW-0001](CPLD-HW-0001.md) and [CPLD-ROM-0004](CPLD-ROM-0004.md).
+
 **Notes**
 
 - **2026-11-20 — Discovery:** Planned with project owner as part of the slot7 ProDOS hard-disk programme. Source-level observations are recorded above; candidate designs and hardware assumptions are not approved implementation results.
@@ -85,6 +93,9 @@ sampled ROM and slot strobes, including the dedicated slot-6 decode. The
 - **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` with the failing-before and passing-after regressions recorded.
 - **2026-11-21 — Merge decision:** Reconciled `2cdcba6` with the tested decode from `174966e`. The review's ROM1-R4 regression is covered at the production sampling phase. The approved raw slot file starts IOSEL at offset zero, so the earlier `slot << 8` offset inside the slot window is superseded. Both original ROM and optional slot-6 decode paths are exercised. The owner's `PR#3`/`PR#0` report applies to the earlier development configuration.
 
+- **2026-11-21 — Independent Acceptance Review:** Accepted the raw slot-window decoder and slot release semantics after reviewing current source and tests. Owner explicitly confirms runtime and slot-pattern verification. No outstanding emulator-addressing defect identified; keep hardware interface validation separate.
+- **2026-11-21 — Status Change:** `REVIEW → RESOLVED`; reviewed implementation accepted. Integration/owner merge remains necessary for `CLOSED`.
+
 **Proposed Change**
 
 Use a raw 4 KiB window per slot, with the IOSEL page at offsets
@@ -104,10 +115,12 @@ ROM and these windows share the 256 KiB address space specified in
 | `mmu-rom-analysis` | `7e1df68` | `SUPERSEDED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
 | `mmu-rom-analysis` | `2cdcba6` | `CHANGES_REQUESTED` | Independent re-review of `7e1df68`, including ROM1-R4 and the owner's Applesoft test |
 | `mmu-rom-analysis` | `1965baa` | `UNREVIEWED` | Record approved raw-ROM scope and start rework |
-| `mmu-rom-analysis` | `174966e` | `UNREVIEWED` | Decode the raw 4 KiB slot windows and test both MMU builds and the combined bus |
-| `mmu-rom-analysis` | `8715356` | `UNREVIEWED` | Reconcile ROM1-R4 and preserve the owner and reviewer evidence |
+| `mmu-rom-analysis` | `174966e` | `APPROVED` | Decode the raw 4 KiB slot windows and test both MMU builds and the combined bus |
+| `mmu-rom-analysis` | `8715356` | `APPROVED` | Reconcile ROM1-R4 and preserve the owner and reviewer evidence |
 
 **Resolution Description**
+
+**Accepted ${today}:** ROM address generation, Apple internal-ROM precedence, IOSEL offset-zero mapping, IOSTB expansion selection, CFFF release and slot 6 compatibility are accepted for the emulator. Keep physical ROM bus and hardware timing validation in CPLD-HW-0001. Ticket is RESOLVED, pending integration/merge.
 
 The raw layout is implemented and verified on the emulator and both RTL
 variants. Awaiting owner review. The slot-6 physical controller configuration
