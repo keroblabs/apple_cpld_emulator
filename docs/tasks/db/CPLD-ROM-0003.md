@@ -1,7 +1,7 @@
 # CPLD-ROM-0003 — Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **ID:** `CPLD-ROM-0003`  
-**Status:** `REVIEW`\
+**Status:** `IN_PROGRESS`\
 **Title:** Implement emulator ROM image backing from ROM_EN_N and MEM_ADDR_OUT
 
 **Description**
@@ -84,6 +84,7 @@ physical address, sampled `ROM_EN_N`, returned byte and bounds status.
 - **2026-11-21 — Raw desktop verification:** CMake 3.31.6, Fedora 42, SDL 2.33.0 software renderer with dummy video. Direct startup with the Apple-only image reached the `Apple //e` Applesoft prompt. A temporary probe fed `PR#3`, `PR#0` and `PRINT 2+3` through the keyboard controller's normal SPI path and captured the rendered screen. The CPU entered internal slot 3 at `$C300`, then the screen showed `PR#0`, the result `5` and a new `]` prompt. The fixture used the original Apple image at `0x08000`, zero fill and SHA-256 `4f598d9a529f1a65fa83e8674b0c41c9950d60c1843839da788fd96ce0ffe7f0`.
 - **2026-11-21 — Raw Disk II verification:** A second flat fixture placed the existing 256-byte Disk II bootstrap at `0x06000` and had SHA-256 `a73675446e4eebf0d9f1eb4c29881e16e416a7dc56755847c08ed0712cdb14f0`. The CPU fetched it at `$C600`, copied all 256 sector-zero bytes from a scratch copy of `solo-flight.dsk` and fetched the first sector instruction at `$0801`. Both desktop probes used the raw CLI with the fixture bytes fixed before startup.
 - **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` for direct raw-file startup and fixture verification.
+- **2026-11-21 — Owner directive and status change:** `REVIEW → IN_PROGRESS` to replace the runtime ROM-loading routes with compiled arrays. Use `apple_rom_bin`, six 4 KiB slot arrays with `SLOTn_ROM` guards and empty slots 0 and 3. The only argument is `-w IMAGEFILE`, for output from the populated backing.
 
 **Proposed Change**
 

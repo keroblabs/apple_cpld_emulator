@@ -1,7 +1,7 @@
 # CPLD-ROM-0002 — Specify slot ROM and expansion ROM flash layout
 
 **ID:** `CPLD-ROM-0002`  
-**Status:** `REVIEW`\
+**Status:** `IN_PROGRESS`\
 **Title:** Specify slot ROM and expansion ROM flash layout
 
 **Description**
@@ -63,6 +63,7 @@ The file consists solely of bytes destined for the slot window.
 - **2026-11-21 — Verification:** The C backing test compares the whole Apple fixture and all seven raw slot fixtures byte for byte. The combined co-simulation reads all 256 slot-7 IOSEL bytes and all 2048 IOSTB bytes, including `$CFFF`, using the real decoder and startup loading route.
 - **2026-11-21 — Status Change:** `IN_PROGRESS → REVIEW` with rev 3 and supporting tests ready for owner review.
 - **2026-11-21 — Merge decision:** Kept rev 3 offsets from `174966e`, where the bytes of each raw slot file land in one 4 KiB window. Preserved the one-file DIP32 and emulator parity gate from `22285ea`. The raw layout replaces the container work requested in ROM2-R4/R6, and ROM2-R5 is verified by the exact CFFF test. The chip-size, fill and readback decision remains in CPLD-ROM-0004 and CPLD-HW-0001.
+- **2026-11-21 — Owner directive and status change:** `REVIEW → IN_PROGRESS` to document the compiled Apple and slot arrays. Slots 1, 2, 4, 5, 6 and 7 have 4096-byte inputs. Slots 0 and 3 have no slot input. The full 256 KiB backing is the target ROM image.
 
 **Proposed Change**
 

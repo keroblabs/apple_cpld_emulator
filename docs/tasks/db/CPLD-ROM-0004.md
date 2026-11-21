@@ -1,7 +1,7 @@
 # CPLD-ROM-0004 — Produce and emulate one programmer-ready DIP32 flash image
 
 **ID:** `CPLD-ROM-0004`  
-**Status:** `OPEN`  
+**Status:** `IN_PROGRESS`\
 **Title:** Produce and emulate one programmer-ready DIP32 flash image
 
 **Description**
@@ -50,6 +50,7 @@ backing. File offsets follow the physical byte addresses from ROM map rev 3.
 - **2026-11-21 — Baseline Test Evidence:** The owner reports the emulator works and `PR#3` / `PR#0` pass with the developer's slot-ROM remapping; this verifies the existing emulator mode, **not** a programmer-ready raw image.
 - **2026-11-21 — Merge decision:** Retained the one-image release and chip readback gates from `22285ea`. The approved raw slot binaries from `174966e` use offset zero for IOSEL, so the earlier `0x6600` and `0x7700` entry offsets are superseded. Apple internal Cx bytes keep their original offsets. The part number, lower IOSEL address wiring, device size/fill policy, reproducible release composition and tests on the actual file remain open.
 - **2026-11-21 — Emulator prerequisite:** CPLD-ROM-0003 added `--rom IMAGE.bin` and verified byte parity, `PR#3`/`PR#0` and the Disk II bootstrap with 256 KiB fixtures. Repeat these checks with the reproducibly composed programmer file after the part and its file length are confirmed.
+- **2026-11-21 — Owner directive and status change:** `OPEN → IN_PROGRESS` to replace the separate composition and raw-file boot workflow. The emulator assembles the 256 KiB target image from compiled inputs and emits the exact backing via `-w IMAGEFILE` after loading all arrays. The previous CLI rejected `-w` and created no image. Verify byte parity, optional output and boot against the new entry point.
 
 **Proposed Change**
 
