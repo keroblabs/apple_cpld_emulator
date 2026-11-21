@@ -18,7 +18,7 @@ sampling phase.
 - Category: `CPLD-ROM`
 - Milestone: M1 — ROM mapping
 - Branch baseline: `mmu-rom-analysis` at `ffb534d`
-- Dependencies: None. Physical bus arbitration is tracked in [CPLD-HW-0001](CPLD-HW-0001.md).
+- Dependencies: None. [CPLD-HW-0001](CPLD-HW-0001.md) records approved flash/STM32 decisions; [CPLD-HW-0002](CPLD-HW-0002.md) owns digital read/write strobes, with physical bus validation separately pending.
 
 ### Address and strobe contract
 
@@ -57,7 +57,7 @@ sampled ROM and slot strobes, including the dedicated slot-6 decode. The
 | --- | --- |
 | ROM1-R1, slot release and phase | The RTL regression checks both the current `$CFFF` address and the following `$C800` in both modes. It also checks consecutive `$CFFF` reads and immediate IOSEL reselection. The combined bus test reads the selected slot's final byte and then zero from the released slot window. |
 | ROM1-R2, address and switch coverage | Both builds cover all seven IOSEL starts and ends, IOSTB boundaries, cross-slot selection, C0xx, RAM banking and language-card/system ROM. Combined tests exercise real IOU soft switch writes and the scheduler's settled `PHI_0` capture. |
-| ROM1-R3, external slot-6 compatibility | `C6XX_N` asserts for internal and external C6xx reads. On an external C6xx read, `ROM_EN_N` stays high in both modes. The emulator's disk I/O handoff at `$C0EC` is tested. Physical bus ownership remains a CPLD-HW-0001 deliverable. |
+| ROM1-R3, external slot-6 compatibility | `C6XX_N` asserts for internal and external C6xx reads. On an external C6xx read, `ROM_EN_N` stays high in both modes. The emulator's disk I/O handoff at `$C0EC` is tested. Physical bus validation remains pending a separate hardware acceptance ticket; HW-0002 covers RTL pin strobes. |
 | ROM1-R4, exact CFFF byte | Review `2cdcba6` found that the old selector cleared on the CFFF transfer's rising edge. The replacement retains the selected slot through the sampled high phase. The tests assert `$7FFF` (slot 7), `$5FFF` (slot 5 in mode 0) and the released `$0800` address on a following C800 read. |
 
 ### Independent final review — 2026-11-21 (accepted for emulator integration)
@@ -120,7 +120,7 @@ ROM and these windows share the 256 KiB address space specified in
 
 **Resolution Description**
 
-**Accepted ${today}:** ROM address generation, Apple internal-ROM precedence, IOSEL offset-zero mapping, IOSTB expansion selection, CFFF release and slot 6 compatibility are accepted for the emulator. Keep physical ROM bus and hardware timing validation in CPLD-HW-0001. Ticket is RESOLVED, pending integration/merge.
+**Accepted ${today}:** ROM address generation, Apple internal-ROM precedence, IOSEL offset-zero mapping, IOSTB expansion selection, CFFF release and slot 6 compatibility are accepted for the emulator. Keep physical ROM bus and hardware timing validation pending a separate board-validation ticket; HW-0001 is now decision-only. Ticket is RESOLVED, pending integration/merge.
 
 The raw layout is implemented and verified on the emulator and both RTL
 variants. Awaiting owner review. The slot-6 physical controller configuration
