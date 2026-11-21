@@ -124,7 +124,7 @@ banking and C6XX_N bus-ownership. ROM1-R1/R2/R3 are addressed above.
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `ac11544` | `SUPERSEDED` | MMU_addr truth-table regression + 17-bit literal width fix |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
+| `mmu-rom-analysis` | `7e1df68` | `UNREVIEWED` | Enforce 4 KiB/slot IO firmware ROM mapping; expand MMU regression |
 
 **Resolution Description**
 

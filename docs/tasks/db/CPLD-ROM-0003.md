@@ -77,7 +77,7 @@ checks. ROM3-R1/R3/R4 resolved; ROM3-R2 partially addressed (see table).
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `f77b260` | `SUPERSEDED` | rom_backing ROM image backing + unit tests; wire into memory_controller |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
+| `mmu-rom-analysis` | `3c4468c` | `UNREVIEWED` | 4 KiB/slot rom_backing: validation, loader, OOB visibility, baseline migration |
 
 **Resolution Description**
 

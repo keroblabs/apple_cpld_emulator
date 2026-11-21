@@ -72,7 +72,7 @@ executable loader in CPLD-ROM-0003).
 | Branch | Commit (short hash) | Review Status | Description |
 | --- | --- | --- | --- |
 | `mmu-rom-analysis` | `846dd38` | `SUPERSEDED` | Add docs/rom-memory-map.md ROM/expansion flash layout spec |
-| `mmu-rom-analysis` | _pending_ | `UNREVIEWED` | rom-memory-map.md rev 2: 4 KiB/slot windows, format/CFFF fixes |
+| `mmu-rom-analysis` | `26f6c06` | `UNREVIEWED` | rom-memory-map.md rev 2: 4 KiB/slot windows, format/CFFF fixes |
 
 **Resolution Description**
 
