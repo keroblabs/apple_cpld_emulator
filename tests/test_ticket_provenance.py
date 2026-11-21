@@ -19,6 +19,7 @@ def require(ok, explanation):
 require("## 4.1 Historical note attribution and provenance" in method, "methodology documents historical provenance")
 require("**Current Work**" in method and "**Reporter:**" in method, "methodology specifies roles and current-work table")
 require("UNKNOWN" in method and "committer" in method, "uncertain historical authorship is explicit")
+require("CLOSED only after the project owner merges" in method and "into `main`" in method, "closure requires main merge")
 
 for issue_id in ids:
     body = (root / f"docs/tasks/db/{issue_id}.md").read_text()
@@ -36,5 +37,5 @@ for issue_id in ids:
     cols = [cell.strip() for cell in rows[0].strip().strip("|").split("|")]
     require(len(cols) == 6 and cols[2] == field("Status") and cols[3] == field("Title"), f"{issue_id}: index status/title match")
 
-require("**Status:** `IN_PROGRESS`" in (root / "docs/tasks/db/CPLD-HW-0004.md").read_text(), "CPLD-HW-0004 remains pending review and re-fit")
+require("**Status:** `CLOSED`" not in (root / "docs/tasks/db/CPLD-HW-0004.md").read_text(), "CPLD-HW-0004 is not CLOSED before integration")
 print(f"All {checks} ticket methodology checks passed.")

@@ -13,7 +13,7 @@
 - **Current work at a glance:** Each new/migrated ticket maintains a concise, editable `Current Work` summary of DONE, PENDING and BLOCKED items, with clear evidence and next action. The chronological Notes remain the immutable decision history.
 - **Preserve existing functionality:** No unreviewed change to the 65816, keyboard, slot6 floppy, Apple C0Fx mailbox or unrelated C video implementation. RTL changes require failing tests and approved scope.
 - **Implementers commit locally:** Developers hand off local commits/SHAs and test results without pushing, making PRs or merging; the project owner controls publication after review. Owner-directed tracker creation or maintenance is not a developer implementation handoff.
-- **No silent closure:** Tests and reviewer acceptance precede RESOLVED; integration precedes CLOSED.
+- **No silent closure:** Tests and reviewer acceptance precede RESOLVED. For this project, a reviewed change is **CLOSED only after the project owner merges its approved PR/changes into `main`**, or approves an explicit no-change disposition. Merely committing on `rtl-compile-work` does not close a ticket.
 
 ## 2. Paths, IDs and categories
 
@@ -32,7 +32,7 @@ Milestones for this programme: **M1 — ROM mapping**, **M2 — Slot 7 firmware*
 
 ## 3. States and kinds
 
-Statuses: `OPEN` (awaiting assessment/approval), `IN_PROGRESS` (agreed work active), `REVIEW` (change/evidence presented), `RESOLVED` (reviewed and accepted), `CLOSED` (integrated or disposition completed), `DEFERRED` (reason and re-entry condition documented). Common sequence: OPEN → IN_PROGRESS → REVIEW → RESOLVED → CLOSED. Reopening requires a dated explanation and new status.
+Statuses: `OPEN` (awaiting assessment/approval), `IN_PROGRESS` (agreed work active), `REVIEW` (change/evidence presented), `RESOLVED` (reviewed and accepted; awaiting owner-controlled integration), `CLOSED` (merged into `main` or owner-approved no-change disposition), `DEFERRED` (reason and re-entry condition documented). Common sequence: OPEN → IN_PROGRESS → REVIEW → RESOLVED → CLOSED. Reopening requires a dated explanation and new status.
 
 Kinds: `BUG` (confirmed or suspected failure; label unverified hypotheses), `TASK` (bounded design or implementation), `IMPROVEMENT` (non-mandatory refinement). A ticket's initial kind and status appear identically in the index and ticket file.
 
@@ -110,7 +110,7 @@ Preserve dated Notes as an **append-only** decision/rework log. Update the index
 3. **Implement on the approved branch** and commit focused changes locally; record SHA, changed files and tests. Developers do not push/merge under the agreed workflow.
 4. **Verify** with Verilator tests, ROM dump/slot probes, byte-exact IOMEM transfer and actual ProDOS boot where relevant. A build-only result is not sufficient.
 5. **Review and record** review findings, with an explicit reviewer identity, the specific actor who executed each test, and the Git commit/event when traceable. Commit statuses are `UNREVIEWED`, `IN_REVIEW`, `CHANGES_REQUESTED`, `APPROVED`, or `SUPERSEDED`.
-6. **Resolve only after approval** with exact tested environment and results; **close on integration** (or accepted no-change disposition).
+6. **Resolve only after approval** with exact tested environment and results; **close when the owner merges to `main`**, or records an accepted no-change disposition. A working-branch commit, fitter success or PR alone is not CLOSED.
 
 ## 6. Compatibility and programme constraints
 
