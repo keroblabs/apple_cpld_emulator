@@ -17,7 +17,7 @@ preserves the approved layout. [128 KiB retarget](CPLD-ROM-0005.md)
 - Category: `CPLD-ROM`
 - Milestone: M1 — ROM mapping; compiled ROM image generation and software verification
 - Branch baseline: `mmu-rom-analysis`, 2026-11-21
-- Dependencies: [`CPLD-ROM-0001`](CPLD-ROM-0001.md), [`CPLD-ROM-0002`](CPLD-ROM-0002.md), [`CPLD-ROM-0003`](CPLD-ROM-0003.md), [`CPLD-ROM-0005`](CPLD-ROM-0005.md) for the retarget and [`CPLD-HW-0001`](CPLD-HW-0001.md) for the physical interface
+- Dependencies: [`CPLD-ROM-0001`](CPLD-ROM-0001.md), [`CPLD-ROM-0002`](CPLD-ROM-0002.md), [`CPLD-ROM-0003`](CPLD-ROM-0003.md), [`CPLD-ROM-0005`](CPLD-ROM-0005.md) for the retarget and [`CPLD-HW-0001`](CPLD-HW-0001.md) for architecture decisions; [`CPLD-HW-0002`](CPLD-HW-0002.md) for memory strobes; physical acceptance separately pending
 - Binding architectural reference: [`docs/rom-flash-image-contract.md`](../../rom-flash-image-contract.md)
 - This ticket **does not** authorise additional CPLD SPI-master RTL or relocate RTC/STM32 serial-flash responsibilities.
 
@@ -43,7 +43,7 @@ lines and CE#/OE#/WE# before programming. The full readback covers both
 2. Start the emulator with `-w IMAGEFILE` to write exactly 131072 bytes from the populated backing. Startup without arguments creates no file.
 3. Compare the exported bytes with the compiled inputs, whole backing and real MMU-driven reads. Probe the empty slots, IOSEL/IOSTB, CFFF, Apple internal ROM and system vectors.
 4. Compare independent builds and SHA-256. Verify `PR#3`/`PR#0` and the floppy bootstrap during a run that writes the image.
-5. **External acceptance:** the populated slot-7 ProDOS/IOMEM release test is owned by [CPLD-TEST-0001](CPLD-TEST-0001.md), while physical programming and complete chip readback are owned by [CPLD-HW-0001](CPLD-HW-0001.md). These are not part of ROM-0004's software-resolution gate.
+5. **External acceptance:** the populated slot-7 ProDOS/IOMEM release test is owned by [CPLD-TEST-0001](CPLD-TEST-0001.md), while physical programming and complete chip readback remain pending a separately approved board-validation ticket (see [HW-0001 decision](CPLD-HW-0001.md)). These are not part of ROM-0004's software-resolution gate.
 
 ### Independent re-review — 2026-11-21 (approved 256 KiB baseline)
 
@@ -56,6 +56,8 @@ populated slot-7 release remained open. ROM-0005 changes the flash capacity
 and verifies lower-bank parity with this approved baseline.
 
 **Notes**
+
+- **2026-11-21 — HW-0001 scope correction (later decision):** The exact device is PLCC32 `SST39VF010-70-4I-NHE` and HW-0001 is a RESOLVED decision record, not an OPEN physical validation ticket. HW-0002 owns new RD/WR signals; separate future board validation owns pinout/electrical/programming/readback. Earlier ownership notes below remain historical.
 
 - **2026-11-21 — Owner Directive:** Hardware ROM must consist of **one image written to the DIP32 flash**. The emulator must reproduce that same image exactly to establish target-device confidence. This supersedes any assumption that per-slot development containers or RAM overlays are the final physical flash format.
 - **2026-11-21 — Design Boundary:** The STM32 still acts as SPI master and owns RTC/serial flash. The DIP32 hardware ROM is a separate, directly addressed hardware resource. Do not conflate it with STM32-side SPI storage.
@@ -91,10 +93,10 @@ chip readback. [Flash image contract](../../rom-flash-image-contract.md)
 
 ### External hardware and firmware acceptance (transferred, not completed)
 
-- [ ] **CPLD-HW-0001:** confirm the SST39VF010-70 exact suffix/PLCC32 or TSOP32 adapter or footprint, 3.3 V electrical interface, address mux and A16 strap, timing, CE#/OE#/WE#, programming and **full 131072-byte chip readback** against the exported hash.
+- [ ] **Pending board-validation ticket:** confirm physical `SST39VF010-70-4I-NHE` PLCC32/socket, 3.3 V electrical interface, address mux and A16 strap, timing, CE#/OE#/WE#, programming and **full 131072-byte chip readback** against the exported hash. [HW-0002](CPLD-HW-0002.md) separately owns digital memory strobes.
 - [ ] **CPLD-FW-0001 / CPLD-TEST-0001:** implement populated slot7 ProDOS firmware, IOMEM disk service, and end-to-end boot/512-byte block tests using the corresponding `-w` output.
 
-**Resolution boundary:** ROM-0004 produces a deterministic **programmer-input file**, not evidence that a physical flash has yet been programmed or that the future ProDOS firmware runs. Hardware/firmware obligations have not been waived; their owning tickets remain OPEN.
+**Resolution boundary:** ROM-0004 produces a deterministic **programmer-input file**, not evidence that a physical flash has yet been programmed or that the future ProDOS firmware runs. Hardware/firmware obligations have not been waived; memory-strobe and firmware tickets remain OPEN and the physical board gate needs a separate approved ticket.
 
 **Commits**
 
@@ -111,4 +113,4 @@ chip readback. [Flash image contract](../../rom-flash-image-contract.md)
 
 **RESOLVED (software), 2026-11-21.** The compiled-in Apple/slot ROM arrays initialise the same 128 KiB backing from which the emulator executes, and `-w IMAGEFILE` exports precisely those bytes in one reproducible programmer-input file. The existing `PR#3`/`PR#0`, slot-pattern, Disk II and export-parity evidence was reviewed and accepted. The original 256 KiB results are preserved in Notes as historical evidence; the approved target image is now 128 KiB. No implementation changes were necessary in this review.
 
-**Excluded from this resolution:** actual SST39VF010-70 purchase/package/adapter verification, electrical and timing validation, flash programming and **131072-byte readback** (CPLD-HW-0001), and the *future populated* ProDOS/IOMEM image integration (CPLD-FW-0001 / CPLD-TEST-0001). These gates are still open and must not be reported as tested. Ticket remains pending merge/integration for CLOSED.
+**Excluded from this resolution:** actual SST39VF010-70-4I-NHE device/socket verification, electrical and timing validation, flash programming and **131072-byte readback** (future board-validation ticket; HW-0001 records decisions only), and the *future populated* ProDOS/IOMEM image integration (CPLD-FW-0001 / CPLD-TEST-0001). These gates are still open and must not be reported as tested. Ticket remains pending merge/integration for CLOSED.

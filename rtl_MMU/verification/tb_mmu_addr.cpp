@@ -27,6 +27,25 @@ struct Bus {
 static int failures;
 static int checks;
 
+static void expect(const VMMU_addr &dut, const char *test, const char *signal,
+                   uint32_t actual, uint32_t expected);
+
+static void expect_strobes(const VMMU_addr &dut, const char *test)
+{
+    const bool phase_valid = dut.RESET && dut.DMA_N && dut.PHI_0;
+    const bool ram_selected = !dut.RAM_EN_N;
+    const bool flash_selected = !dut.ROM_EN_N || !dut.IOSEL_N ||
+                                !dut.IOSTB_N || !dut.C6XX_N;
+    const bool read_active = phase_valid && dut.CPU_RW &&
+                             (ram_selected || flash_selected);
+    const bool write_active = phase_valid && !dut.CPU_RW && ram_selected;
+
+    expect(dut, test, "BUS_RD_N", dut.BUS_RD_N, !read_active);
+    expect(dut, test, "BUS_WR_N", dut.BUS_WR_N, !write_active);
+    expect(dut, test, "BUS_RD_N & BUS_WR_N",
+           !(dut.BUS_RD_N == 0 && dut.BUS_WR_N == 0), 1);
+}
+
 static void cpu_cycle(VMMU_addr &dut, uint16_t address, bool read, const Switches &sw)
 {
     dut.MODE_SEL = sw.mode_sel;
@@ -37,16 +56,19 @@ static void cpu_cycle(VMMU_addr &dut, uint16_t address, bool read, const Switche
     dut.EXP16_RAM = sw.exp16_ram;
 
     dut.PHI_0 = 0;
+    dut.DMA_N = 1;
     dut.ADDR = address;
     dut.CPU_RW = read;
     dut.eval();
     dut.PHI_0 = 1;
     dut.eval();
+    expect_strobes(dut, "settled bus phase");
 }
 
 static void reset(VMMU_addr &dut)
 {
     dut.RESET = 0;
+    dut.DMA_N = 1;
     dut.SW_RAMWR = 0;
     dut.SW_80STORE = 0;
     dut.SW_HIRES = 0;
@@ -175,12 +197,36 @@ int main(int argc, char **argv)
 
     cpu_cycle(dut, 0xC080, true, external);
     expect_bus(dut, "C0xx I/O only", {0, 1, 1, 1, 1, 0});
+    expect_strobes(dut, "C0xx I/O read has no memory strobe");
     cpu_cycle(dut, 0xD000, true, external);
     expect_bus(dut, "system ROM start", {0xD000, 0});
     cpu_cycle(dut, 0xFFFF, true, external);
     expect_bus(dut, "system ROM end", {0xFFFF, 0});
     cpu_cycle(dut, 0x2000, true, external);
     expect_bus(dut, "main RAM", {0x2000, 1, 0});
+    expect_strobes(dut, "RAM read asserts only BUS_RD_N");
+    cpu_cycle(dut, 0x2000, false, external);
+    expect_strobes(dut, "RAM write asserts only BUS_WR_N");
+    cpu_cycle(dut, 0xD123, false, external);
+    expect_strobes(dut, "ordinary ROM write cannot select flash programming");
+
+    cpu_cycle(dut, 0x2000, true, external);
+    dut.PHI_0 = 0;
+    dut.eval();
+    expect(dut, "PHI_0 low idle", "BUS_RD_N", dut.BUS_RD_N, 1);
+    expect(dut, "PHI_0 low idle", "BUS_WR_N", dut.BUS_WR_N, 1);
+    dut.PHI_0 = 1;
+    dut.DMA_N = 0;
+    dut.eval();
+    expect(dut, "DMA-owned cycle", "BUS_RD_N", dut.BUS_RD_N, 1);
+    expect(dut, "DMA-owned cycle", "BUS_WR_N", dut.BUS_WR_N, 1);
+    dut.DMA_N = 1;
+    dut.RESET = 0;
+    dut.eval();
+    expect(dut, "reset cycle", "BUS_RD_N", dut.BUS_RD_N, 1);
+    expect(dut, "reset cycle", "BUS_WR_N", dut.BUS_WR_N, 1);
+    dut.RESET = 1;
+    dut.eval();
 
     Switches aux = external;
     aux.ramrd = 1;

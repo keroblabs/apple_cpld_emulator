@@ -15,7 +15,7 @@ and target flash. Define each Apple-visible window and its byte offsets.
 - Category: `CPLD-ROM`
 - Milestone: M1 — ROM mapping
 - Branch baseline: `mmu-rom-analysis` at `ffb534d`
-- Dependencies: [CPLD-ROM-0001](CPLD-ROM-0001.md), [CPLD-HW-0001](CPLD-HW-0001.md)
+- Dependencies: [CPLD-ROM-0001](CPLD-ROM-0001.md), [CPLD-HW-0001](CPLD-HW-0001.md) (architecture), [CPLD-HW-0002](CPLD-HW-0002.md) (digital strobes)
 
 The lower 64 KiB contains
 `apple_rom_bin[]` at `0x08000–0x0FFFF` and `slot1_rom_bin[]`,
@@ -49,7 +49,7 @@ ROM defines the corresponding macro and the array before the fallback.
 
 **Evidence:** Source inspection of `rom_backing_init`, `slot_roms.h`, MMU address/strobe RTL, combined bus tests, and ROM export comparisons. Developer reports default and overridden image parity; owner reports successful `PR#3`/`PR#0` and full pattern checks across all populated slot windows. No independent local toolchain execution by reviewer. The exported 256 KiB layout is accepted as the software image contract.
 
-**Boundary:** Physical flash part, A16/A17 address wiring, voltage/timing, full-chip programmed/readback parity and populated slot7 firmware remain explicitly unverified, tracked in CPLD-HW-0001/ROM-0004/TEST-0001.
+**Boundary:** Physical flash part, A16/A17 address wiring, voltage/timing, full-chip programmed/readback parity and populated slot7 firmware remain explicitly unverified, pending a separate physical board-validation ticket; HW-0001 is now decisions only, HW-0002 covers digital strobes, and TEST-0001 covers populated slot7.
 
 **Notes**
 
@@ -109,5 +109,5 @@ and programming verification.
 convention were approved with rev 4. Rev 5 preserves those offsets in the
 128 KiB target image. [CPLD-ROM-0005](CPLD-ROM-0005.md)
 
-Physical ROM timing remains in CPLD-HW-0001. This ticket is RESOLVED,
+Physical ROM timing remains pending a separate board-validation ticket; HW-0001 now records decisions only. This ticket is RESOLVED,
 pending integration.

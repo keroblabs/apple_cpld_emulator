@@ -91,6 +91,8 @@ void memory_bus_reset( cpld_model_t *context )
     mmu->DEVSEL_N = TRUE;
     mmu->rom_en_n = TRUE;
     mmu->ram_en_n = TRUE;
+    mmu->bus_rd_n = TRUE;
+    mmu->bus_wr_n = TRUE;
 }
 
 void memory_bus_request( cpld_model_t *context )

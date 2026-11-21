@@ -107,7 +107,50 @@ At a CS-high rising SPI clock edge, `IOU_spi_iface.v` loads its status shift reg
 
 `rtl_spi_slave.cpp` supplies a CS-high reset/load clock, thirteen CS-low data bits, a trailing clock and CS closing. The RTL shifts on rising SPI edges; the emulator captures MISO in the low half-period before those shifts. The current implementation advances at four simulation ticks per SPI half-period, driven by CPU-access scheduling rather than an independent wall clock. Preserve this edge behaviour until a dedicated RTL waveform test proves an alternative equivalent.
 
-### 4.1 Software queue semantics
+### 4.1 GPIO / bit-banged timing contract
+
+The verified master contract is defined by signal edges, not by an STM32 SPI
+peripheral mode:
+
+1. SCK idles low with CS high. Keep CS high through at least one rising SCK
+   edge; the IOU loads the five status bits and resets its frame receiver on
+   that edge.
+2. Pull CS low while SCK is low. Drive MOSI for each bit during the low phase,
+   keep it stable through the rising edge, and send the 13-bit word MSB first:
+   five selector bits followed by eight payload bits.
+3. The master samples MISO during the low phase immediately before each rising
+   edge. The IOU shifts on rising edges. The first five returned bits are the
+   status flags; the next eight are the mailbox byte for selector 0 or `0xFF`
+   for other selectors.
+4. After the thirteenth data rising edge, the selected pending control is
+   active low until one trailing rising edge advances the frame to its idle
+   terminal count. Keep CS low for that trailing edge, then raise CS. The
+   trailing edge carries no payload.
+5. If CS aborts a frame, the pending controls become inactive immediately; the
+   receiver state resets on the next rising edge while CS is high. Start the
+   next transaction with the preload edge. Additional clocks after the
+   trailing edge are ignored until that preload.
+
+The emulator master uses four scheduler ticks per SCK half-period (eight per
+complete SCK period), drives MOSI throughout each low/high pair, and captures
+MISO at the end of the low phase. The pending/acknowledgement phase regression
+adds a conservative digital operating point: PHI_0 at 1 MHz and SCK at 125 kHz,
+with a 50% SCK duty cycle and four PHI_0 periods per SCK half-period. A selected
+pending control is asserted from the thirteenth data rising edge through the
+trailing rising edge, one complete SCK period (8 microseconds, or eight PHI_0
+periods). CPU acknowledgement inputs are held through three PHI_0 rising edges.
+The Verilator test sweeps 1,000 relative start phases in 1 ns increments across
+one PHI_0 period and checks selector 0 write-pending clear, selector 1
+read-pending set plus CPU acknowledgement, and selector 2 keyboard-pending set
+plus CPU acknowledgement. Results and a near-worst-phase waveform are in
+`rtl_IOU/verification/spi_phase_handshake.vcd`.
+
+This establishes logical capture for that conservative simulated clock ratio;
+it does not establish an arbitrary maximum SCK, electrical setup/hold time,
+metastability margin, or hardware clock-domain safety. Any faster operating
+point needs its own phase sweep and a defined pending-control hold interval.
+
+### 4.2 Software queue semantics
 
 Current `spi_data_t` (in `emulator/onboard/board.h`):
 

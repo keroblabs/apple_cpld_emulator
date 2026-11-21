@@ -54,6 +54,8 @@ typedef struct cpld_model_MMU_t_
 
     bool_t rom_en_n;
     bool_t ram_en_n;
+    bool_t bus_rd_n;
+    bool_t bus_wr_n;
 
     uint32_t cpu_address; // original 16-bit address from the CPU
     uint32_t mem_address; // physical MMU address after translation
