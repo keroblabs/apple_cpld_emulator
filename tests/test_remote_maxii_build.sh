@@ -48,7 +48,7 @@ case "${1:-}" in
     --version) echo 'Quartus MOCK 25.1std'; exit 0 ;;
     -t)
         [[ ${2:-} == configure.tcl ]] || exit 50
-        [[ ${MOCK_CONFIG_FAIL:-0} == 0 ]] || exit 51
+        [[ ${MOCK_CONFIG_FAIL:-0} == 0 ]] || { echo "mock config failed" >&2; exit 51; }
         printf 'set_global_assignment -name DEVICE %s\n' "$3" >> cpld_top.qsf
         if [[ $4 == full ]]; then
             printf 'set_global_assignment -name VERILOG_MACRO FULL_MMU_ADDR=1\n' >> cpld_top.qsf
