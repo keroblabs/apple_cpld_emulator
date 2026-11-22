@@ -44,7 +44,7 @@ shopt -s nullglob
 rtl_sources=(input/rtl_single/*.v)
 shopt -u nullglob
 mapfile -t required_sources < <(
-    sed -n 's|^set_global_assignment -name VERILOG_FILE ../../rtl_single/\\([^[:space:]]*\\)$|\\1|p' "$project_dir/cpld_top.qsf"
+    sed -n 's|^set_global_assignment -name VERILOG_FILE ../../rtl_single/\([^[:space:]]*\)$|\1|p' "$project_dir/cpld_top.qsf"
 )
 (("${#required_sources[@]}" > 0)) || {
     echo "Quartus project has no explicit Verilog dependencies" >&2; exit 2;
