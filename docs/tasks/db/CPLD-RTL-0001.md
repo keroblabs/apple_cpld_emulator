@@ -5,7 +5,7 @@
 **Title:** Consolidate MMU and IOU into one synthesizable CPLD RTL
 **Reporter:** Project owner (Kerob Labs)
 **Reviewer:** GPT-6; project owner (final acceptance)
-**Assignee:** Project owner (Kerob Labs) — implementation performed personally by the owner
+**Assignee:** Codex (GPT-6) — assigned for RTL1-R3/R5 corrective work
 
 **Description**
 
@@ -17,7 +17,7 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 - Category: `CPLD-RTL` (new RTL-consolidation category)
 - Milestone: M1/M3 — Single-CPLD architecture / synthesizability
 - Baseline: `main` at `572b0607`; review of `rtl-compile-work` (`d4da93b`) and `rtl-compile-work-single-cpld` (`3c2a5ca`) on 2026-11-22.
-- Assignee / executor: **Project owner (Kerob Labs)**, who personally implemented both phases; **not GPT-6 or another developer**.
+- Original phase 1 and phase 2 implementation executor: **Project owner (Kerob Labs)**, who personally implemented both phases; this remains distinct from the current RTL1-R3/R5 corrective assignment.
 - Related work: [CPLD-HW-0004](CPLD-HW-0004.md) (prior separate-CPLD fitting), [CPLD-HW-0006](CPLD-HW-0006.md) (hardware timing, pin/electrical qualification), [CPLD-HW-0005](CPLD-HW-0005.md) (flash-update grant).
 - Phase 1, [`rtl-compile-work`](https://github.com/keroblabs/apple_cpld_emulator/tree/rtl-compile-work): owner created `rtl_single/cpld_top.v` and a reorganized self-contained set of RTL modules derived from `rtl_IOU_MMU_TB/IOU_MMU_tb.v`, simplifying internal ownership of shared IOU/MMU functions; `rtl_single/build.sh` added for Verilator.
 - Phase 2, [`rtl-compile-work-single-cpld`](https://github.com/keroblabs/apple_cpld_emulator/tree/rtl-compile-work-single-cpld): owner switched CMake's Verilator library/object path to `Vcpld_top` / `rtl_single/obj_dir`, updated `cpld/rtl_interface.h`, and stopped driving omitted inputs in `cpld/rtl_model.cpp`.
@@ -34,7 +34,8 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 | DONE (owner-reported) | Emulator works with `PR#3` and `PR#0`; no other post-switch test performed | ASSIGNEE (owner) | No test log or independent execution supplied |
 | DONE | Reviewer inspected combined top, shared blocks and the three-file phase-2 integration diff | REVIEWER (GPT-6) | Findings RTL1-R1 through R5 below |
 | PENDING | Independent Verilator build and relevant MMU/ROM-bus/SPI functional regressions against both combined designs, with explicit feature coverage for omitted inputs | ASSIGNEE (owner) / reviewer | Record command, variant, test count, result and source commit |
-| PENDING | Establish whether `D7_status_en` inherited initialization produces correct dynamic C01x/C06x/DHIRES status gating; correct if reproduced | ASSIGNEE (owner) | RTL1-R3; inspect `rtl_single/iomem_block.v` |
+| DONE | Changed `D7_status_en` from an initialized `reg` to a continuously driven `wire` declaration assignment | ASSIGNEE (Codex/GPT-6) | RTL1-R3 source correction; see Notes |
+| PENDING | Verify dynamic C01x/C06x/DHIRES status gating with focused simulation/synthesis regression | Project owner / reviewer | RTL1-R3; record exact command and result |
 | PENDING | Quartus Analysis & Synthesis, Fitter and I/O assignment for EPM240 first, EPM570 fallback; capture utilization/warnings and source hash | ASSIGNEE (owner) | New MAX II project and exact part/variant |
 | PENDING | Clock/I/O constraints, report of unconstrained paths, timing and CDC review before physical acceptance | Hardware reviewer / owner | Related HW-0006; do not interpret fit alone as timing pass |
 | PENDING | Owner-controlled review/PR/merge to main | Reporter (owner) | Resolve only with accepted evidence; close only after merge |
@@ -49,6 +50,8 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 - **2026-11-22 — REVIEWER (GPT-6) — RTL1-R3 (POTENTIAL INHERITED BUG; VERIFICATION REQUIRED):** `rtl_single/iomem_block.v` contains `reg D7_status_en = ~(C01X_N & C06X_N & DHIRES_state_n);`. A declaration initialization is not a continuously updating Boolean assignment. This line is also present in the preexisting `rtl_IOU/IOU_iomem.v`, so it is **not introduced by this consolidation**. A stale/unknown enable could suppress status reads or cause tool-dependent synthesis behavior. Confirm by focused simulation/synthesis, then use a continuous `wire` assignment or combinational logic if required, with a regression test.
 - **2026-11-22 — REVIEWER (GPT-6) — RTL1-R4 (BUILD/TIMING GAP):** `rtl_single/build.sh` is a Verilator compilation helper, not a Quartus build project. MAX II resource fit, pinout, dual-clock SCK/PHI_0 behavior and timing have not been exercised on EPM240/EPM570. Keep in REVIEW pending actual fitter evidence. Related physical qualification remains HW-0006.
 - **2026-11-22 — REVIEWER (GPT-6) — RTL1-R5 (MINOR MAINTENANCE):** `cpld/rtl_interface.h` comments and the `SPLIT_CPLD` diagnostic still name `IOU_MMU_tb`; update documentation/diagnostics to `cpld_top` when tidying, without changing functional behavior.
+- **2026-11-22 — ASSIGNEE (Codex/GPT-6) — Assignee handoff:** Per project-owner instruction for this work, responsibility for the RTL1-R3/R5 corrective actions transfers from Project owner (Kerob Labs) to Codex (GPT-6). The original phase 1 and phase 2 implementation remains owner-performed as recorded above; owner/reviewer verification items remain assigned in Current Work.
+- **2026-11-22 — ASSIGNEE (Codex/GPT-6) — RTL1-R3 source correction:** Changed `D7_status_en` in `rtl_single/iomem_block.v` from an initialized `reg` to a continuously driven `wire` declaration assignment. This addresses the reviewed declaration-initialization issue. Focused behavioral simulation/synthesis verification was not run and remains pending in Current Work.
 
 **Proposed Change**
 

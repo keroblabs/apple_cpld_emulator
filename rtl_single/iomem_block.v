@@ -48,9 +48,10 @@ assign          reg_kbd_pending_state = reg_kbd_pending;
 reg [7:0]       reg_out_r,          reg_out_x;
 reg [7:0]       dbus_out_r,         dbus_out_x;
 
-wire        reg_wr_pending;
-wire        reg_rd_pending;
-wire        reg_kbd_pending;
+wire            reg_wr_pending;
+wire            reg_rd_pending;
+wire            reg_kbd_pending;
+wire            D7_status_en        = ~(C01X_N & C06X_N & DHIRES_state_n);
 
 reg             reg_wr_pending_set;   /*reg_wr_pending_clr,*/
 reg           /*reg_rd_pending_set,*/   reg_rd_pending_clr;
@@ -58,7 +59,6 @@ reg           /*reg_kbd_pending_set,*/  reg_kbd_pending_clr;
 
 reg             dbus_en_int;
 reg             D7_status_line;
-reg             D7_status_en        = ~(C01X_N & C06X_N & DHIRES_state_n);
 
 // IOU_toggle_jk
 // IOU_set_reset
