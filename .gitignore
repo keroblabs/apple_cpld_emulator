@@ -21,3 +21,5 @@ rtl_MMU/MMU.jed
 rtl_MMU/MMU.pin
 rtl_MMU/MMU.tt3
 rtl_MMU/build.sh
+rtl_single/obj_dir/
+*.patch
