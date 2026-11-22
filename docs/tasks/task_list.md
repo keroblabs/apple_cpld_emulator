@@ -44,6 +44,7 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | ID | Kind | Status | Title | Milestone | Ticket |
 | --- | --- | --- | --- | --- | --- |
 | `CPLD-BLD-0001` | TASK | REVIEW | Remote ATF1508ASV build driver for MMU and IOU | M1/M3 — RTL build infrastructure | [Details](db/CPLD-BLD-0001.md) |
+| `CPLD-BLD-0002` | TASK | REVIEW | Remote Quartus Prime Lite MAX II single-CPLD build workflow | M1/M3 — Single-CPLD RTL build | [Details](db/CPLD-BLD-0002.md) |
 
 ## CPLD-DOC — Documentation and engineering methodology
 
