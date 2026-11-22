@@ -37,7 +37,7 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 | DONE | Changed `D7_status_en` from an initialized `reg` to a continuously driven `wire` declaration assignment | ASSIGNEE (Codex/GPT-6) | RTL1-R3 source correction; see Notes |
 | DONE | Updated the `cpld/rtl_interface.h` interface comment and `SPLIT_CPLD` diagnostic to name `cpld_top` | ASSIGNEE (Codex/GPT-6) | RTL1-R5 maintenance; see Notes |
 | PENDING | Verify dynamic C01x/C06x/DHIRES status gating with focused simulation/synthesis regression | Project owner / reviewer | RTL1-R3; record exact command and result |
-| DONE (owner-reported fit), PENDING (timing/traceability) | EPM240T100C5 compact fit successful: 223/240 LEs (93%), 64/80 pins (80%); source hashes, warnings, pin plan and SDC/STA interpretation outstanding | ASSIGNEE (owner); reviewer (GPT-6) | [CPLD-BLD-0002](CPLD-BLD-0002.md); review detailed reports, optional EPM570 comparison |
+| DONE (owner-reported two-device fits), PENDING (timing/traceability) | Compact EPM240 fit: 223/240 LEs (93%), 64/80 pins; compact EPM570 fit: 223/570 LEs (39%), 64/76 pins. Detailed warnings, pin plan, source hashes and STA interpretation outstanding | ASSIGNEE (owner); reviewer (GPT-6) | [CPLD-BLD-0002](CPLD-BLD-0002.md); review reports and hardware plan |
 | PENDING | Clock/I/O constraints, report of unconstrained paths, timing and CDC review before physical acceptance | Hardware reviewer / owner | Related HW-0006; do not interpret fit alone as timing pass |
 | PENDING | Owner-controlled review/PR/merge to main | Reporter (owner) | Resolve only with accepted evidence; close only after merge |
 
@@ -60,6 +60,8 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 - **2026-11-22 — REVIEWER (GPT-6) — MAX II build workstream:** A separate branch, `quartus-maxii-build`, implements the new source-tracked remote Quartus compilation flow under [CPLD-BLD-0002](CPLD-BLD-0002.md). Source implementation here remains separate from build-tool acceptance and PCB/electrical acceptance.
 
 - **2026-11-22 — REVIEWER (GPT-6) — Single-CPLD feasibility outcome:** Project owner supplied Quartus Fitter summary for MAX II **EPM240T100C5** compact interface; **fitting successful at 223/240 (93%) logic elements and 64/80 (80%) I/O pins**, with 0/1 UFM blocks. This **demonstrates owner-reported physical device resource fitting** of the combined RTL at the chosen unconstrained board pinout, but leaves only 17 LEs. It is not evidence of timing/CDC or physical-board validation; numeric area should not be extrapolated from ATF1508 macrocells. Keep REVIEW pending focused RTL regressions and numerical timing/constraints assessment; compare EPM570 if design-growth margin is important. Build details cross-referenced in [CPLD-BLD-0002](CPLD-BLD-0002.md).
+
+- **2026-11-22 — REVIEWER (GPT-6) — MAX II device comparison:** Owner supplied successful EPM570T100C5 compact fit (Quartus 25.1std.0): **223/570 LEs (39%), 64/76 I/O pins (84%), 0/1 UFM**, compared with EPM240T100C5 **223/240 LEs (93%), 64/80 I/O pins (80%)**. Both report final timing *models*, not timing closure. EPM570 offers **347 spare LEs**, but only **12 spare external I/O pins** in the 100-pin package; `FULL_MMU_ADDR` would consume another twelve signals before restoring omitted SW2/PDL2/PDL3, subject to actual fitting constraints. Maintain reduced-input variant and HW-0006 limitations; do not claim full board readiness.
 
 **Proposed Change**
 
