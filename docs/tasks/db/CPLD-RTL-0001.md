@@ -37,7 +37,7 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 | DONE | Changed `D7_status_en` from an initialized `reg` to a continuously driven `wire` declaration assignment | ASSIGNEE (Codex/GPT-6) | RTL1-R3 source correction; see Notes |
 | DONE | Updated the `cpld/rtl_interface.h` interface comment and `SPLIT_CPLD` diagnostic to name `cpld_top` | ASSIGNEE (Codex/GPT-6) | RTL1-R5 maintenance; see Notes |
 | PENDING | Verify dynamic C01x/C06x/DHIRES status gating with focused simulation/synthesis regression | Project owner / reviewer | RTL1-R3; record exact command and result |
-| PENDING | Quartus Analysis & Synthesis, Fitter and I/O assignment for EPM240 first, EPM570 fallback; capture utilization/warnings and source hash | ASSIGNEE (owner) | New MAX II project and exact part/variant |
+| PENDING | Quartus Analysis & Synthesis, Fitter and I/O assignment for EPM240 first, EPM570 fallback; capture utilization/warnings and source hash | ASSIGNEE (owner) | [CPLD-BLD-0002](CPLD-BLD-0002.md); run exact part/variant on devel-rtl |
 | PENDING | Clock/I/O constraints, report of unconstrained paths, timing and CDC review before physical acceptance | Hardware reviewer / owner | Related HW-0006; do not interpret fit alone as timing pass |
 | PENDING | Owner-controlled review/PR/merge to main | Reporter (owner) | Resolve only with accepted evidence; close only after merge |
 
@@ -54,6 +54,10 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 - **2026-11-22 — ASSIGNEE (Codex/GPT-6) — Assignee handoff:** Per project-owner instruction for this work, responsibility for the RTL1-R3/R5 corrective actions transfers from Project owner (Kerob Labs) to Codex (GPT-6). The original phase 1 and phase 2 implementation remains owner-performed as recorded above; owner/reviewer verification items remain assigned in Current Work.
 - **2026-11-22 — ASSIGNEE (Codex/GPT-6) — RTL1-R3 source correction:** Changed `D7_status_en` in `rtl_single/iomem_block.v` from an initialized `reg` to a continuously driven `wire` declaration assignment. This addresses the reviewed declaration-initialization issue. Focused behavioral simulation/synthesis verification was not run and remains pending in Current Work.
 - **2026-11-22 — ASSIGNEE (Codex/GPT-6) — RTL1-R5 maintenance:** Updated the `cpld/rtl_interface.h` interface comment and `SPLIT_CPLD` diagnostic to identify the combined `cpld_top` RTL/model. This is comment/diagnostic-only maintenance; no functional behavior changed and no build/test was run.
+
+
+- **2026-11-22 — REVIEWER (GPT-6) — Follow-up source review:** Inspected the owner's latest `rtl-compile-work-single-cpld` branch after the corrective commits. `rtl_single/iomem_block.v` now uses `wire D7_status_en = ~(C01X_N & C06X_N & DHIRES_state_n);`, supplying the continuous combinational status enable required by RTL1-R3. The `cpld/rtl_interface.h` active comment and `SPLIT_CPLD` error now name `cpld_top`, satisfying RTL1-R5. **Both changes are accepted at source level**, without claiming execution of focused status-read regressions or a real MAX II fit. The status remains REVIEW.
+- **2026-11-22 — REVIEWER (GPT-6) — MAX II build workstream:** A separate branch, `quartus-maxii-build`, implements the new source-tracked remote Quartus compilation flow under [CPLD-BLD-0002](CPLD-BLD-0002.md). Source implementation here remains separate from build-tool acceptance and PCB/electrical acceptance.
 
 **Proposed Change**
 
@@ -73,8 +77,8 @@ Accept the two-phase owner implementation as the **baseline** for the single-CPL
 | --- | --- | --- | --- |
 | `rtl-compile-work` | [`d4da93b`](https://github.com/keroblabs/apple_cpld_emulator/commit/d4da93b397d3031cd35b77e14ab678e5274f6ec5) | IN_REVIEW | Owner's phase 1: add reorganized single-CPLD RTL modules in `rtl_single/` |
 | `rtl-compile-work-single-cpld` | [`3c2a5ca`](https://github.com/keroblabs/apple_cpld_emulator/commit/3c2a5ca01440e7dad14297cbf3884452974a9d0b) | IN_REVIEW | Owner's phase 2: retarget emulator and CMake to `Vcpld_top` |
-| `rtl-compile-work-single-cpld` | `fa79081` | UNREVIEWED | RTL1-R3: change `D7_status_en` to a continuously driven wire; focused behavioral verification remains pending |
-| `rtl-compile-work-single-cpld` | `e29617d` | UNREVIEWED | RTL1-R5: update the `cpld_top` interface comment and `SPLIT_CPLD` diagnostic |
+| `rtl-compile-work-single-cpld` | `fa79081` | APPROVED | RTL1-R3: change `D7_status_en` to a continuously driven wire; focused behavioral verification remains pending |
+| `rtl-compile-work-single-cpld` | `e29617d` | APPROVED | RTL1-R5: update the `cpld_top` interface comment and `SPLIT_CPLD` diagnostic |
 
 **Resolution Description**
 
