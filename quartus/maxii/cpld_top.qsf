@@ -1,0 +1,26 @@
+# CPLD-BLD-0002: single physical MAX II device.
+# The device part and optional FULL_MMU_ADDR macro are set by configure.tcl
+# in the isolated remote build. There are intentionally NO pin assignments.
+set_global_assignment -name FAMILY "MAX II"
+set_global_assignment -name TOP_LEVEL_ENTITY cpld_top
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name SDC_FILE cpld_top.sdc
+
+# Explicit source list: no legacy two-chip top, tests or generated netlists.
+set_global_assignment -name VERILOG_FILE ../../rtl_single/cpld_top.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/io_common.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/iomem_block.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/spi_iface.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/mmu_addr.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/mmu_addr16.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/memory_map.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/memory_select.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/slot_control.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/mem_exp16.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/ff_toggle_d.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/ff_toggle_jk.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/TTL_ls138.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/TTL_ls138_2.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/TTL_ls251.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/TTL_ls251_2.v
+set_global_assignment -name VERILOG_FILE ../../rtl_single/TTL_ls259.v
