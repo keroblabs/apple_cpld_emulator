@@ -33,6 +33,12 @@ timing and physical readback require hardware validation. [CPLD-ROM-0005](db/CPL
 | `CPLD-HW-0005` | TASK | OPEN | Define authorised parallel-NOR update route | M1 — ROM update capability | [Details](db/CPLD-HW-0005.md) |
 | `CPLD-HW-0006` | TASK | OPEN | Qualify physical CPLD timing, pin plan and bus isolation | Hardware integration / PCB readiness | [Details](db/CPLD-HW-0006.md) |
 
+## CPLD-RTL — Single-CPLD RTL architecture
+
+| ID | Kind | Status | Title | Milestone | Ticket |
+| --- | --- | --- | --- | --- | --- |
+| `CPLD-RTL-0001` | TASK | REVIEW | Consolidate MMU and IOU into one synthesizable CPLD RTL | M1/M3 — Single-CPLD architecture | [Details](db/CPLD-RTL-0001.md) |
+
 ## CPLD-BLD — Build automation
 
 | ID | Kind | Status | Title | Milestone | Ticket |
