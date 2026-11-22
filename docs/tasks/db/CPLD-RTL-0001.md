@@ -35,6 +35,7 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 | DONE | Reviewer inspected combined top, shared blocks and the three-file phase-2 integration diff | REVIEWER (GPT-6) | Findings RTL1-R1 through R5 below |
 | PENDING | Independent Verilator build and relevant MMU/ROM-bus/SPI functional regressions against both combined designs, with explicit feature coverage for omitted inputs | ASSIGNEE (owner) / reviewer | Record command, variant, test count, result and source commit |
 | DONE | Changed `D7_status_en` from an initialized `reg` to a continuously driven `wire` declaration assignment | ASSIGNEE (Codex/GPT-6) | RTL1-R3 source correction; see Notes |
+| DONE | Updated the `cpld/rtl_interface.h` interface comment and `SPLIT_CPLD` diagnostic to name `cpld_top` | ASSIGNEE (Codex/GPT-6) | RTL1-R5 maintenance; see Notes |
 | PENDING | Verify dynamic C01x/C06x/DHIRES status gating with focused simulation/synthesis regression | Project owner / reviewer | RTL1-R3; record exact command and result |
 | PENDING | Quartus Analysis & Synthesis, Fitter and I/O assignment for EPM240 first, EPM570 fallback; capture utilization/warnings and source hash | ASSIGNEE (owner) | New MAX II project and exact part/variant |
 | PENDING | Clock/I/O constraints, report of unconstrained paths, timing and CDC review before physical acceptance | Hardware reviewer / owner | Related HW-0006; do not interpret fit alone as timing pass |
@@ -52,6 +53,7 @@ Implement a single physical-CPLD RTL hierarchy for the Apple CPLD Emulator, repl
 - **2026-11-22 — REVIEWER (GPT-6) — RTL1-R5 (MINOR MAINTENANCE):** `cpld/rtl_interface.h` comments and the `SPLIT_CPLD` diagnostic still name `IOU_MMU_tb`; update documentation/diagnostics to `cpld_top` when tidying, without changing functional behavior.
 - **2026-11-22 — ASSIGNEE (Codex/GPT-6) — Assignee handoff:** Per project-owner instruction for this work, responsibility for the RTL1-R3/R5 corrective actions transfers from Project owner (Kerob Labs) to Codex (GPT-6). The original phase 1 and phase 2 implementation remains owner-performed as recorded above; owner/reviewer verification items remain assigned in Current Work.
 - **2026-11-22 — ASSIGNEE (Codex/GPT-6) — RTL1-R3 source correction:** Changed `D7_status_en` in `rtl_single/iomem_block.v` from an initialized `reg` to a continuously driven `wire` declaration assignment. This addresses the reviewed declaration-initialization issue. Focused behavioral simulation/synthesis verification was not run and remains pending in Current Work.
+- **2026-11-22 — ASSIGNEE (Codex/GPT-6) — RTL1-R5 maintenance:** Updated the `cpld/rtl_interface.h` interface comment and `SPLIT_CPLD` diagnostic to identify the combined `cpld_top` RTL/model. This is comment/diagnostic-only maintenance; no functional behavior changed and no build/test was run.
 
 **Proposed Change**
 

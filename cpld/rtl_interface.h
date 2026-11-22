@@ -1,9 +1,9 @@
 #ifndef rtl_interface_h
 #define rtl_interface_h
 
-// C++-only interface to the combined Verilator MMU/IOU testbench.
+// C++-only interface to the combined cpld_top Verilator RTL.
 #ifdef SPLIT_CPLD
-#error "The state-machine RTL adapter currently requires the combined IOU_MMU_tb model."
+#error "The state-machine RTL adapter currently requires the combined cpld_top model."
 #endif
 
 #include "types.h"
