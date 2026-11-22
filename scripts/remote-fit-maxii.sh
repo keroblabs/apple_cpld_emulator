@@ -43,10 +43,17 @@ trap collect_artifacts EXIT
 shopt -s nullglob
 rtl_sources=(input/rtl_single/*.v)
 shopt -u nullglob
-(("${#rtl_sources[@]}" >= 17)) || {
-    echo "Incomplete rtl_single source set (expected at least 17 Verilog files)" >&2
-    exit 2
+mapfile -t required_sources < <(
+    sed -n 's|^set_global_assignment -name VERILOG_FILE ../../rtl_single/\\([^[:space:]]*\\)$|\\1|p' "$project_dir/cpld_top.qsf"
+)
+(("${#required_sources[@]}" > 0)) || {
+    echo "Quartus project has no explicit Verilog dependencies" >&2; exit 2;
 }
+for source in "${required_sources[@]}"; do
+    [[ -s "input/rtl_single/$source" ]] || {
+        echo "Missing Quartus RTL dependency: rtl_single/$source" >&2; exit 2;
+    }
+done
 [[ -s input/rtl_single/cpld_top.v ]] || { echo "Missing cpld_top" >&2; exit 2; }
 
 # Strongly prefer the installation verified on Fedora devel-rtl. A non-
