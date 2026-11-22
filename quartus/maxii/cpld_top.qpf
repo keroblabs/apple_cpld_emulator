@@ -1,0 +1,4 @@
+# Tracked Quartus Prime Lite project for the consolidated Apple CPLD RTL.
+# The matching cpld_top.qsf is configured in an isolated copy by configure.tcl.
+QUARTUS_VERSION = "25.1"
+PROJECT_REVISION = "cpld_top"
