@@ -73,6 +73,8 @@ Accept the two-phase owner implementation as the **baseline** for the single-CPL
 | --- | --- | --- | --- |
 | `rtl-compile-work` | [`d4da93b`](https://github.com/keroblabs/apple_cpld_emulator/commit/d4da93b397d3031cd35b77e14ab678e5274f6ec5) | IN_REVIEW | Owner's phase 1: add reorganized single-CPLD RTL modules in `rtl_single/` |
 | `rtl-compile-work-single-cpld` | [`3c2a5ca`](https://github.com/keroblabs/apple_cpld_emulator/commit/3c2a5ca01440e7dad14297cbf3884452974a9d0b) | IN_REVIEW | Owner's phase 2: retarget emulator and CMake to `Vcpld_top` |
+| `rtl-compile-work-single-cpld` | `fa79081` | UNREVIEWED | RTL1-R3: change `D7_status_en` to a continuously driven wire; focused behavioral verification remains pending |
+| `rtl-compile-work-single-cpld` | `e29617d` | UNREVIEWED | RTL1-R5: update the `cpld_top` interface comment and `SPLIT_CPLD` diagnostic |
 
 **Resolution Description**
 
