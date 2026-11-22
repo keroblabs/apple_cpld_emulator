@@ -4,11 +4,15 @@ set(MODULE_NAME         apple_cpld)
 set(RTL_MODEL_MMU       VMMU)
 set(RTL_MODEL_IOU       VIOU)
 set(RTL_MODEL           Vsystem)
-set(RTL_MODEL_TB        VIOU_MMU_tb)
+
+#set(RTL_MODEL_TB        VIOU_MMU_tb)
+set(RTL_MODEL_TB        Vcpld_top)
+
+#set(RTL_TB_OBJ_DIR      ../rtl_IOU_MMU_TB/obj_dir)
+set(RTL_TB_OBJ_DIR      ../rtl_single/obj_dir)
 
 set(RTL_MMU_OBJ_DIR     ../rtl_MMU_v2/obj_dir)
 set(RTL_IOU_OBJ_DIR     ../rtl_IOU_v2/obj_dir)
-set(RTL_TB_OBJ_DIR      ../rtl_IOU_MMU_TB/obj_dir)
 set(VERILATOR_INC       /home/marcio/Tools/verilator/include)
 
 #find_package(SDL2 REQUIRED)

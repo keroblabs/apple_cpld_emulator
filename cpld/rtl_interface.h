@@ -8,9 +8,13 @@
 
 #include "types.h"
 #include "rtl_model.h"
-#include "VIOU_MMU_tb.h"
 
-typedef VIOU_MMU_tb rtl_model_t;
+//#include "VIOU_MMU_tb.h"
+#include "Vcpld_top.h"
+
+//typedef VIOU_MMU_tb rtl_model_t;
+typedef Vcpld_top rtl_model_t;
+
 extern rtl_model_t *p_model;
 
 // No dynamic allocation or implicit cast between the two emulated chip states.

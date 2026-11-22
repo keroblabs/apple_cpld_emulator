@@ -34,11 +34,11 @@ void rtl_model_reset( void )
     p_model->DMA_N = TRUE;
     p_model->SW0 = FALSE;
     p_model->SW1 = FALSE;
-    p_model->SW2 = FALSE;
+    //p_model->SW2 = FALSE;
     p_model->PDL0 = TRUE;
     p_model->PDL1 = TRUE;
-    p_model->PDL2 = TRUE;
-    p_model->PDL3 = TRUE;
+    //p_model->PDL2 = TRUE;
+    //p_model->PDL3 = TRUE;
     p_model->MODE_SEL = TRUE;
 
     p_model->PHI_0 = FALSE;
